@@ -4,8 +4,11 @@
 #
 # See documentation in:
 # https://doc.scrapy.org/en/latest/topics/spider-middleware.html
+import random
 
 from scrapy import signals
+
+from recruit_spider.config import user_agent
 
 
 class RecruitSpiderSpiderMiddleware(object):
@@ -78,7 +81,7 @@ class RecruitSpiderDownloaderMiddleware(object):
         # - or return a Request object
         # - or raise IgnoreRequest: process_exception() methods of
         #   installed downloader middleware will be called
-        return None
+        request.headers['User-Agent'] = random.choice(user_agent)
 
     def process_response(self, request, response, spider):
         # Called with the response returned from the downloader.

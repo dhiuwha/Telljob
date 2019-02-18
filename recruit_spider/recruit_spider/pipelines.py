@@ -10,4 +10,5 @@ class RecruitSpiderPipeline(object):
     def process_item(self, item, spider):
         # if spider.name == '51job':
         #     print('spider_51job: ', item)
+        # print(item)
         return item

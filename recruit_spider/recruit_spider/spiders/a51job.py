@@ -19,7 +19,7 @@ class A51jobSpider(scrapy.Spider):
 
         item['position_name'] = self.get_position_name(response)
         item['position_url'] = response.meta['url']
-        item['company_name'] = self.get_position_company_name(response)
+        item['company_name'] = self.get_company_name(response)
         item['company_url'] = self.get_company_url(response)
         item['salary'] = self.get_position_salary(response)
         item['working_place'], item['experience_requirement'], item['educational_requirement'], \
@@ -37,7 +37,7 @@ class A51jobSpider(scrapy.Spider):
         return position.xpath('//div[@class="dw_table"]/div[@class="el"]/p/span/a/@href').extract()
 
     @staticmethod
-    def get_position_company_name(position):
+    def get_company_name(position):
         return position.xpath('//div[@class="cn"]/p[@class="cname"]/a[@class="catn"]/@title').extract()[0]
 
     @staticmethod
