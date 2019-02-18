@@ -27,3 +27,20 @@ class A51jobSpiderItem(scrapy.Item):
     publish_time = scrapy.Field()
 
     position_detail_info = scrapy.Field()
+
+
+class ZhilianSpiderItem(scrapy.Item):
+    position_name = scrapy.Field()
+    position_url = scrapy.Field()
+    company_name = scrapy.Field()
+    company_url = scrapy.Field()
+    salary = scrapy.Field()
+    working_place = scrapy.Field()
+    experience_requirement = scrapy.Field()
+    educational_requirement = scrapy.Field()
+    header_count = scrapy.Field()
+    create_time = scrapy.Field()
+    update_time = scrapy.Field()
+    end_time = scrapy.Field()
+
+    position_detail_info = scrapy.Field()
