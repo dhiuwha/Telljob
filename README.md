@@ -1,2 +1,2 @@
 # Telljob
-A job hunting website based on python.
+51、智联、拉勾、boss直聘爬虫
