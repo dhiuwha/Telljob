@@ -82,6 +82,10 @@ class RecruitSpiderDownloaderMiddleware(object):
         # - or raise IgnoreRequest: process_exception() methods of
         #   installed downloader middleware will be called
         request.headers['User-Agent'] = random.choice(user_agent)
+        print(request.headers)
+        # print(request.cookies)
+        # if spider.name == 'lagou':
+        #     request.headers['Cookie'] = ''
 
     def process_response(self, request, response, spider):
         # Called with the response returned from the downloader.

@@ -66,8 +66,5 @@ class BossSpider(scrapy.Spider):
     @staticmethod
     def get_position_detail_info(position):
         content = position.xpath('//div[@class="job-sec"]/div[@class="text"]/text()').re('[^\xa0]+')
-        for sentence in content:
-            if len(sentence) == 0 or sentence == ' ':
-                content.remove(sentence)
         return content
 

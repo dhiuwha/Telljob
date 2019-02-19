@@ -15,6 +15,7 @@ class ZhilianSpider(scrapy.Spider):
         data = json.loads(response.body.decode('utf8'))
         for element in data['data']['results']:
             item = ZhilianSpiderItem()
+
             item['position_name'] = element['jobName']
             item['position_url'] = element['positionURL']
             item['company_name'] = element['company']['name']
@@ -38,10 +39,7 @@ class ZhilianSpider(scrapy.Spider):
     @staticmethod
     def get_position_detail_info(position):
         content = position.xpath(
-            '//div[@class="responsibility pos-common"]/div[@class="pos-ul"]/text()').re('[^\xa0\s]+')
+            '//div[@class="responsibility pos-common"]/div[@class="pos-ul"]/text()').re('[^\xa0]+')
         content.extend(position.xpath(
-                '//div[@class="responsibility pos-common"]/div[@class="pos-ul"]/descendant::*/text()').re('[^\xa0\s]+'))
-        for sentence in content:
-            if len(sentence) == 0 or sentence == ' ':
-                content.remove(sentence)
+                '//div[@class="responsibility pos-common"]/div[@class="pos-ul"]/descendant::*/text()').re('[^\xa0]+'))
         return content

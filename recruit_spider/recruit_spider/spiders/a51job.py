@@ -57,11 +57,8 @@ class A51jobSpider(scrapy.Spider):
 
     @staticmethod
     def get_position_detail_info(position):
-        content = position.xpath('//div[@class="bmsg job_msg inbox"]/p/text()').re('[^\xa0\s]+')
+        content = position.xpath('//div[@class="bmsg job_msg inbox"]/p/text()').re('[^\xa0]+')
         if len(content) == 0:
-            content = position.xpath('//div[@class="bmsg job_msg inbox"]/p/descendant::*/text()').re('[^\xa0\s]+')
-        for sentence in content:
-            if len(sentence) == 0 or sentence == ' ':
-                content.remove(sentence)
+            content = position.xpath('//div[@class="bmsg job_msg inbox"]/p/descendant::*/text()').re('[^\xa0]+')
         return content
 
