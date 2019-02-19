@@ -38,10 +38,10 @@ class ZhilianSpider(scrapy.Spider):
     @staticmethod
     def get_position_detail_info(position):
         content = position.xpath(
-            '//div[@class="responsibility pos-common"]/div[@class="pos-ul"]/text()').re('[^\xa0\s]*')
+            '//div[@class="responsibility pos-common"]/div[@class="pos-ul"]/text()').re('[^\xa0\s]+')
         content.extend(position.xpath(
-                '//div[@class="responsibility pos-common"]/div[@class="pos-ul"]/descendant::*/text()').re('[^\xa0]*'))
+                '//div[@class="responsibility pos-common"]/div[@class="pos-ul"]/descendant::*/text()').re('[^\xa0\s]+'))
         for sentence in content:
-            if sentence == '' or sentence == ' ':
+            if len(sentence) == 0 or sentence == ' ':
                 content.remove(sentence)
         return content
