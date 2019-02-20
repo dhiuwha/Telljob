@@ -4,6 +4,7 @@ import json
 import scrapy
 
 from recruit_spider.items import ZhilianSpiderItem
+from recruit_spider.proxy import Proxy
 
 
 class ZhilianSpider(scrapy.Spider):
@@ -11,7 +12,7 @@ class ZhilianSpider(scrapy.Spider):
     start_urls = ['https://fe-api.zhaopin.com/c/i/sou?pageSize=90&cityId=538&workExperience=-1&education=-1&companyType=-1&employmentType=-1&jobWelfareTag=-1&kw=python&kt=3']
 
     def parse(self, response):
-
+        proxy = Proxy()
         data = json.loads(response.body.decode('utf8'))
         for element in data['data']['results']:
             item = ZhilianSpiderItem()
@@ -29,7 +30,7 @@ class ZhilianSpider(scrapy.Spider):
             item['end_time'] = element['endDate']
             item['header_count'] = element['recruitCount']
             # if item['position_url'] == 'https://jobs.zhaopin.com/CC263265337J00086662006.htm':
-            yield scrapy.Request(url=item['position_url'], meta={"item": item}, callback=self.detail_parse, dont_filter=True)
+            yield scrapy.Request(url=item['position_url'], meta={"item": item, 'proxy_list': proxy}, callback=self.detail_parse, dont_filter=True)
 
     def detail_parse(self, response):
         item = response.meta['item']

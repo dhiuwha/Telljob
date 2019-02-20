@@ -2,6 +2,7 @@
 import scrapy
 
 from recruit_spider.items import BossSpiderItem
+from recruit_spider.proxy import Proxy
 
 
 class BossSpider(scrapy.Spider):
@@ -10,6 +11,7 @@ class BossSpider(scrapy.Spider):
     start_urls = ['https://www.zhipin.com/job_detail/?query=python&scity=101010100&industry=&position=']
 
     def parse(self, response):
+        proxy = Proxy()
         position_url = self.get_position_url(response)
         publish_time = self.get_publish_time(response)
         basic_info = self.get_position_basic_info(response)
@@ -18,8 +20,8 @@ class BossSpider(scrapy.Spider):
 
         for url, publish_time, basic_info in map(lambda x, y, z: [x, y, z], position_url, publish_time, basic_info):
             url = "https://www.zhipin.com" + url
-            yield scrapy.Request(url=url, meta={'url': url, 'publish_time': publish_time, 'basic_info': basic_info},
-                                 callback=self.detail_parse, dont_filter=True)
+            yield scrapy.Request(url=url, callback=self.detail_parse, dont_filter=True,
+                                 meta={'url': url, 'publish_time': publish_time, 'basic_info': basic_info, 'proxy_list': proxy})
 
     def detail_parse(self, response):
         item = BossSpiderItem()

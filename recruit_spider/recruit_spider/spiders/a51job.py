@@ -4,6 +4,7 @@ import re
 import scrapy
 
 from recruit_spider.items import A51jobSpiderItem
+from recruit_spider.proxy import Proxy
 
 
 class A51jobSpider(scrapy.Spider):
@@ -12,9 +13,11 @@ class A51jobSpider(scrapy.Spider):
     start_urls = ['https://search.51job.com/list/120700,000000,0000,00,9,99,python,2,1.html']
 
     def parse(self, response):
+        proxy = Proxy()
         position_url = self.get_position_url(response)
         for url in position_url:
-            yield scrapy.Request(url=url, meta={'url': url}, callback=self.detail_parse, dont_filter=True)
+            yield scrapy.Request(url=url, meta={'url': url, 'proxy_list': proxy},
+                                 callback=self.detail_parse, dont_filter=True)
 
     def detail_parse(self, response):
         item = A51jobSpiderItem()

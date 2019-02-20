@@ -9,6 +9,7 @@ import random
 from scrapy import signals
 
 from recruit_spider.config import user_agent
+from recruit_spider.proxy import Proxy
 
 
 class RecruitSpiderSpiderMiddleware(object):
@@ -82,10 +83,13 @@ class RecruitSpiderDownloaderMiddleware(object):
         # - or raise IgnoreRequest: process_exception() methods of
         #   installed downloader middleware will be called
         request.headers['User-Agent'] = random.choice(user_agent)
-        print(request.headers)
-        # print(request.cookies)
-        # if spider.name == 'lagou':
-        #     request.headers['Cookie'] = ''
+        if 'proxy_list' in request.meta:
+            proxy_obj = request.meta['proxy_list']
+            # print(proxy_obj.proxy)
+            request.meta['temp_proxy'] = proxy_obj.random_choose()
+            request.meta['proxy'] = proxy_obj.splice_ip(request.meta['temp_proxy'])
+            # raise TypeError
+        # pass
 
     def process_response(self, request, response, spider):
         # Called with the response returned from the downloader.
@@ -94,9 +98,13 @@ class RecruitSpiderDownloaderMiddleware(object):
         # - return a Response object
         # - return a Request object
         # - or raise IgnoreRequest
+        # print(spider.name, response.headers.getlist('Set-Cookie'))
+        # if spider.name == 'lagou' and response.headers.getlist('Set-Cookie') is []:
+        #     raise ConnectionError
         return response
 
     def process_exception(self, request, exception, spider):
+        """代理失效时更换IP， IP池为空时重新获取IP"""
         # Called when a download handler or a process_request()
         # (from other downloader middleware) raises an exception.
 
@@ -104,7 +112,14 @@ class RecruitSpiderDownloaderMiddleware(object):
         # - return None: continue processing this exception
         # - return a Response object: stops process_exception() chain
         # - return a Request object: stops process_exception() chain
-        pass
+        proxy_obj = request.meta['proxy_list']
+        if len(proxy_obj.proxy) == 0:
+            request.meta['proxy_list'] = Proxy()
+            proxy_obj = request.meta['proxy_list']
+        proxy_obj.proxy.remove(request.meta['temp_proxy'])
+        request.meta['temp_proxy'] = proxy_obj.random_choose()
+        request.meta['proxy'] = proxy_obj.splice_ip(request.meta['temp_proxy'])
+        # return request
 
     def spider_opened(self, spider):
         spider.logger.info('Spider opened: %s' % spider.name)
