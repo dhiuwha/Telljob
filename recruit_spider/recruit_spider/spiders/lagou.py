@@ -27,7 +27,10 @@ class Lagou(scrapy.Spider):
 
         set_cookie = str(response.headers.getlist('Set-Cookie'))
 
-        if set_cookie is []:
+        print(set_cookie)
+
+        if not set_cookie:
+            print(1)
             self.start_requests()
 
         JSESSIONID = re.search('JSESSIONID=.*?;', set_cookie).group(0)
@@ -70,9 +73,7 @@ class Lagou(scrapy.Spider):
 
     @staticmethod
     def get_position_detail_info(position):
-        content = position.xpath('//div[@class="content_l fl"]/dl[@class="job_detail"]/dd[@class="job_bt"]/div[@class="job-detail"]/p/text()').re('[^\xa0]+')
-        # content.extend(position.xpath(
-        #         '//div[@class="responsibility pos-common"]/div[@class="pos-ul"]/descendant::*/text()').re('[^\xa0\s]+'))
+        content = position.xpath('//div[@class="content_l fl"]/dl[@class="job_detail"]/dd[@class="job_bt"]/div[@class="job-detail"]/descendant::*/text()').re('[^\xa0]+')
         return content
 
 
