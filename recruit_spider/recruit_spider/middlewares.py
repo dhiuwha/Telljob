@@ -141,9 +141,9 @@ class RecruitSpiderDownloaderMiddleware(object):
         # - return a Request object: stops process_exception() chain
         print('---------------error--------------------')
 
-        redis_conn = request.meta['redis_conn']
-
-        redis_conn.srem('zhima_proxy', request.meta['proxy'])
+        # redis_conn = request.meta['redis_conn']
+        #
+        # redis_conn.srem('zhima_proxy', request.meta['proxy'])
 
 
         # proxy_obj = request.meta['proxy_list']
