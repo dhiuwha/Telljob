@@ -3,28 +3,25 @@ import re
 
 import redis
 import scrapy
+from scrapy_redis.spiders import RedisSpider
 
 from recruit_spider.config import redis_host, redis_port
 from recruit_spider.items import A51jobSpiderItem
-from recruit_spider.proxy import Proxy
 
 
-class A51jobSpider(scrapy.Spider):
+class A51jobSpider(RedisSpider):
     name = '51job'
 
-    redis_pool = redis.ConnectionPool(host=redis_host, port=redis_port, decode_responses=True)
-    redis_conn = redis.Redis(connection_pool=redis_pool)
+    redis_key = '51job:start_urls'
 
-    def start_requests(self):
-        yield scrapy.Request(url='https://search.51job.com/list/120700,000000,0000,00,9,99,python,2,1.html',
-                             meta={'redis_conn': self.redis_conn},
-                             callback=self.parse)
+    def make_requests_from_url(self, url):
+        return scrapy.Request(url=url, callback=self.parse, dont_filter=True)
 
     def parse(self, response):
 
         position_url = self.get_position_url(response)
         for url in position_url:
-            yield scrapy.Request(url=url, meta={'url': url, 'redis_conn': self.redis_conn},
+            yield scrapy.Request(url=url, meta={'url': url},
                                  callback=self.detail_parse, dont_filter=True)
 
     def detail_parse(self, response):

@@ -15,6 +15,19 @@ BOT_NAME = 'recruit_spider'
 SPIDER_MODULES = ['recruit_spider.spiders']
 NEWSPIDER_MODULE = 'recruit_spider.spiders'
 
+DUPEFILTER_CLASS = "scrapy_redis.dupefilter.RFPDupeFilter"
+SCHEDULER = "scrapy_redis.scheduler.Scheduler"
+
+# REDIS_HOST = redis_host
+# REDIS_PORT = redis_port
+
+REDIS_PARAMS = {
+   'host': redis_host,
+   'port': redis_port,
+   'db': 1
+}
+
+# SCHEDULER_PERSIST = True    # 清空爬取队列和去重指纹
 
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
 #USER_AGENT = 'recruit_spider (+http://www.yourdomain.com)'
@@ -55,6 +68,7 @@ SPIDER_MIDDLEWARES = {
 # See https://doc.scrapy.org/en/latest/topics/downloader-middleware.html
 DOWNLOADER_MIDDLEWARES = {
    'recruit_spider.middlewares.RecruitSpiderDownloaderMiddleware': 600,
+   # 'recruit_spider.testmiddleware.Middleware': 600
 }
 
 # Enable or disable extensions
@@ -89,9 +103,6 @@ ITEM_PIPELINES = {
 #HTTPCACHE_DIR = 'httpcache'
 #HTTPCACHE_IGNORE_HTTP_CODES = []
 #HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
-
-REDIS_HOST = redis_host
-REDIS_PORT = redis_port
 
 DOWNLOAD_FAIL_ON_DATALOSS = False
 DOWNLOAD_TIMEOUT = 3

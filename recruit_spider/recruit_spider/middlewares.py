@@ -7,9 +7,11 @@
 import random
 import time
 
+import redis
+import requests
 from scrapy import signals
 
-from recruit_spider.config import user_agent
+from recruit_spider.config import user_agent, redis_host, redis_port, proxy_api
 from recruit_spider.proxy import Proxy
 
 
@@ -87,20 +89,26 @@ class RecruitSpiderDownloaderMiddleware(object):
 
         request.headers['User-Agent'] = random.choice(user_agent)
 
-        redis_conn = request.meta['redis_conn']
-        redis_member_num = redis_conn.scard('zhima_proxy')
-
-        if redis_member_num < 3:
-            if redis_conn.get('proxy_lock') != 'locked':
-                redis_conn.set('proxy_lock', 'locked')
-                Proxy(redis_conn).put_into_redis()
-                redis_conn.set('proxy_lock', 'released')
-            else:
-                time.sleep(1)
-
         if 'https://www.lagou.com/jobs/positionAjax.json?' not in request.url:
-            proxy = redis_conn.srandmember('zhima_proxy')
-            request.meta['proxy'] = proxy
+            request.meta['proxy'] = requests.post(proxy_api, data={'failure_proxy': request.meta['proxy']}).text
+
+        # redis_conn = request.meta.get('redis_conn')
+        # if not redis_conn:
+        #     redis_pool = redis.ConnectionPool(host=redis_host, port=redis_port, decode_responses=True)
+        #     redis_conn = redis.Redis(connection_pool=redis_pool)
+        # redis_member_num = redis_conn.scard('zhima_proxy')
+        #
+        # if redis_member_num < 3:
+        #     if redis_conn.get('proxy_lock') != 'locked':
+        #         redis_conn.set('proxy_lock', 'locked')
+        #         Proxy(redis_conn).put_into_redis()
+        #         redis_conn.set('proxy_lock', 'released')
+        #     else:
+        #         time.sleep(1)
+        #
+        # if 'https://www.lagou.com/jobs/positionAjax.json?' not in request.url:
+        #     proxy = redis_conn.srandmember('zhima_proxy')
+        #     request.meta['proxy'] = proxy
 
         print(request.meta['proxy'])
         # if 'proxy_list' in request.meta:

@@ -5,24 +5,20 @@ import re
 import redis
 import scrapy
 import pymongo
+from scrapy_redis.spiders import RedisSpider
+
 from recruit_spider.config import mongo_host, redis_host, redis_port
 from recruit_spider.items import LaGouSpiderItem
 from recruit_spider.proxy import Proxy
 
 
-class Lagou(scrapy.Spider):
+class Lagou(RedisSpider):
     name = 'lagou'
 
-    redis_pool = redis.ConnectionPool(host=redis_host, port=redis_port, decode_responses=True)
-    redis_conn = redis.Redis(connection_pool=redis_pool)
+    redis_key = 'lagou:start_urls'
 
-    def start_requests(self):
-
-        yield scrapy.Request(
-            url='https://www.lagou.com/jobs/list_python?px=default&city=%E4%B8%8A%E6%B5%B7',
-            meta={'redis_conn': self.redis_conn},
-            callback=self.init_parse
-        )
+    def make_requests_from_url(self, url):
+        return scrapy.Request(url=url, callback=self.init_parse, dont_filter=True)
 
     def init_parse(self, response):
 
@@ -41,7 +37,7 @@ class Lagou(scrapy.Spider):
 
         return scrapy.FormRequest(
             url='https://www.lagou.com/jobs/positionAjax.json?px=default&city=%E4%B8%8A%E6%B5%B7&needAddtionalResult=false',
-            meta={'proxy': response.meta['proxy'], 'redis_conn': self.redis_conn},
+            meta={'proxy': response.meta['proxy']},
             formdata={'first': 'true', 'pn': '1', 'kd': 'python'},
             headers={'Cookie': cookie},
             callback=self.parse
@@ -65,7 +61,7 @@ class Lagou(scrapy.Spider):
             item['publish_time'] = element['createTime']
 
             yield scrapy.Request(url=item['position_url'],
-                                 meta={"item": item, 'redis_conn': self.redis_conn},
+                                 meta={"item": item},
                                  callback=self.detail_parse, dont_filter=True)
 
     def detail_parse(self, response):
