@@ -11,8 +11,7 @@ import redis
 import requests
 from scrapy import signals
 
-from recruit_spider.config import user_agent, redis_host, redis_port, proxy_api
-from recruit_spider.proxy import Proxy
+from recruit_spider.config import user_agent, remove_proxy_api, get_proxy_api
 
 
 class RecruitSpiderSpiderMiddleware(object):
@@ -90,7 +89,7 @@ class RecruitSpiderDownloaderMiddleware(object):
         request.headers['User-Agent'] = random.choice(user_agent)
 
         if 'https://www.lagou.com/jobs/positionAjax.json?' not in request.url:
-            request.meta['proxy'] = requests.post(proxy_api, data={'failure_proxy': request.meta['proxy']}).text
+            request.meta['proxy'] = requests.post(get_proxy_api).text
 
         # redis_conn = request.meta.get('redis_conn')
         # if not redis_conn:
@@ -140,7 +139,7 @@ class RecruitSpiderDownloaderMiddleware(object):
         # - return a Response object: stops process_exception() chain
         # - return a Request object: stops process_exception() chain
         print('---------------error--------------------')
-
+        requests.post(remove_proxy_api, data={'failure_proxy': request.meta['proxy']})
         # redis_conn = request.meta['redis_conn']
         #
         # redis_conn.srem('zhima_proxy', request.meta['proxy'])
