@@ -1,27 +1,30 @@
 import json
-import random
 
+import redis
 import requests
 
-from recruit_spider.config import proxy_api
+from recruit_spider.config import proxy_api, redis_host, redis_port
 
 
 class Proxy:
 
-    def __init__(self):
-        self.proxy = self.get_proxy_json()
+    def __init__(self, redis_conn):
+        self.redis_conn = redis_conn
 
     @staticmethod
     def get_proxy_json():
         result = requests.get(proxy_api).content.decode('utf8')
-        return json.loads(result)['msg']
-
-    def random_choose(self):
-        return random.choice(self.proxy)
+        return json.loads(result)['data']
 
     @staticmethod
     def splice_ip(proxy):
         return 'https://' + proxy['ip'] + ":" + str(proxy['port'])
+
+    def put_into_redis(self):
+        proxies = self.get_proxy_json()
+        for element in proxies:
+            self.redis_conn.sadd('zhima_proxy', self.splice_ip(element))
+        # print(self.redis_conn.smembers('zhima_proxy'))
 
 
 if __name__ == '__main__':
@@ -29,4 +32,4 @@ if __name__ == '__main__':
     # print(r.status_code)
     # print(r.content.decode('utf8'))
     # print(r.text)
-    print(Proxy().proxy)
+    Proxy().put_into_redis()

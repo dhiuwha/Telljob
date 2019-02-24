@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
+import redis
 import scrapy
 
+from recruit_spider.config import redis_host, redis_port
 from recruit_spider.items import BossSpiderItem
 from recruit_spider.proxy import Proxy
 
@@ -8,10 +10,16 @@ from recruit_spider.proxy import Proxy
 class BossSpider(scrapy.Spider):
     name = 'boss'
     # allowed_domains = ['www.zhipin.com']
-    start_urls = ['https://www.zhipin.com/job_detail/?query=python&scity=101010100&industry=&position=']
+    redis_pool = redis.ConnectionPool(host=redis_host, port=redis_port, decode_responses=True)
+    redis_conn = redis.Redis(connection_pool=redis_pool)
+
+    def start_requests(self):
+        yield scrapy.Request(url='https://www.zhipin.com/job_detail/?query=python&scity=101010100&industry=&position=',
+                             meta={'redis_conn': self.redis_conn},
+                             callback=self.parse)
 
     def parse(self, response):
-        proxy = Proxy()
+
         position_url = self.get_position_url(response)
         publish_time = self.get_publish_time(response)
         basic_info = self.get_position_basic_info(response)
@@ -21,7 +29,7 @@ class BossSpider(scrapy.Spider):
         for url, publish_time, basic_info in map(lambda x, y, z: [x, y, z], position_url, publish_time, basic_info):
             url = "https://www.zhipin.com" + url
             yield scrapy.Request(url=url, callback=self.detail_parse, dont_filter=True,
-                                 meta={'url': url, 'publish_time': publish_time, 'basic_info': basic_info, 'proxy_list': proxy})
+                                 meta={'url': url, 'publish_time': publish_time, 'basic_info': basic_info, 'redis_conn': self.redis_conn})
 
     def detail_parse(self, response):
         item = BossSpiderItem()

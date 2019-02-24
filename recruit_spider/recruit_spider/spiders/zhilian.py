@@ -1,18 +1,28 @@
 # -*- coding: utf-8 -*-
 import json
 
+import redis
 import scrapy
 
+from recruit_spider.config import redis_host, redis_port
 from recruit_spider.items import ZhilianSpiderItem
 from recruit_spider.proxy import Proxy
 
 
 class ZhilianSpider(scrapy.Spider):
     name = 'zhilian'
-    start_urls = ['https://fe-api.zhaopin.com/c/i/sou?pageSize=90&cityId=538&workExperience=-1&education=-1&companyType=-1&employmentType=-1&jobWelfareTag=-1&kw=python&kt=3']
+    start_urls = []
+
+    redis_pool = redis.ConnectionPool(host=redis_host, port=redis_port, decode_responses=True)
+    redis_conn = redis.Redis(connection_pool=redis_pool)
+
+    def start_requests(self):
+        yield scrapy.Request(url='https://fe-api.zhaopin.com/c/i/sou?pageSize=90&cityId=538&workExperience=-1&education=-1&companyType=-1&employmentType=-1&jobWelfareTag=-1&kw=python&kt=3',
+                             meta={'redis_conn': self.redis_conn},
+                             callback=self.parse)
 
     def parse(self, response):
-        proxy = Proxy()
+
         data = json.loads(response.body.decode('utf8'))
         for element in data['data']['results']:
             item = ZhilianSpiderItem()
@@ -30,7 +40,7 @@ class ZhilianSpider(scrapy.Spider):
             item['end_time'] = element['endDate']
             item['header_count'] = element['recruitCount']
             # if item['position_url'] == 'https://jobs.zhaopin.com/CC263265337J00086662006.htm':
-            yield scrapy.Request(url=item['position_url'], meta={"item": item, 'proxy_list': proxy}, callback=self.detail_parse, dont_filter=True)
+            yield scrapy.Request(url=item['position_url'], meta={"item": item, 'redis_conn': self.redis_conn}, callback=self.detail_parse, dont_filter=True)
 
     def detail_parse(self, response):
         item = response.meta['item']

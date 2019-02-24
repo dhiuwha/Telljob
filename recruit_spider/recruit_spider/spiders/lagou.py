@@ -2,9 +2,10 @@
 import json
 import re
 
+import redis
 import scrapy
 import pymongo
-from recruit_spider.config import mongo_host
+from recruit_spider.config import mongo_host, redis_host, redis_port
 from recruit_spider.items import LaGouSpiderItem
 from recruit_spider.proxy import Proxy
 
@@ -12,14 +13,14 @@ from recruit_spider.proxy import Proxy
 class Lagou(scrapy.Spider):
     name = 'lagou'
 
-    start_urls = ['https://www.lagou.com/jobs/list_python?px=default&city=%E4%B8%8A%E6%B5%B7']
+    redis_pool = redis.ConnectionPool(host=redis_host, port=redis_port, decode_responses=True)
+    redis_conn = redis.Redis(connection_pool=redis_pool)
 
     def start_requests(self):
-        proxy = Proxy()
-        print(proxy.proxy)
+
         yield scrapy.Request(
             url='https://www.lagou.com/jobs/list_python?px=default&city=%E4%B8%8A%E6%B5%B7',
-            meta={'proxy_list': proxy},
+            meta={'redis_conn': self.redis_conn},
             callback=self.init_parse
         )
 
@@ -40,7 +41,7 @@ class Lagou(scrapy.Spider):
 
         return scrapy.FormRequest(
             url='https://www.lagou.com/jobs/positionAjax.json?px=default&city=%E4%B8%8A%E6%B5%B7&needAddtionalResult=false',
-            meta={'proxy': response.meta['proxy'], 'delivery': response.meta['proxy_list']},
+            meta={'proxy': response.meta['proxy'], 'redis_conn': self.redis_conn},
             formdata={'first': 'true', 'pn': '1', 'kd': 'python'},
             headers={'Cookie': cookie},
             callback=self.parse
@@ -48,6 +49,7 @@ class Lagou(scrapy.Spider):
 
     def parse(self, response):
         data = json.loads(response.body.decode('utf8'))
+        print(data)
 
         for element in data['content']['positionResult']['result']:
             item = LaGouSpiderItem()
@@ -63,7 +65,7 @@ class Lagou(scrapy.Spider):
             item['publish_time'] = element['createTime']
 
             yield scrapy.Request(url=item['position_url'],
-                                 meta={"item": item, 'proxy_list': response.meta['delivery']},
+                                 meta={"item": item, 'redis_conn': self.redis_conn},
                                  callback=self.detail_parse, dont_filter=True)
 
     def detail_parse(self, response):

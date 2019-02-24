@@ -8,6 +8,7 @@
 #     https://doc.scrapy.org/en/latest/topics/settings.html
 #     https://doc.scrapy.org/en/latest/topics/downloader-middleware.html
 #     https://doc.scrapy.org/en/latest/topics/spider-middleware.html
+from recruit_spider.config import redis_host, redis_port
 
 BOT_NAME = 'recruit_spider'
 
@@ -46,14 +47,14 @@ COOKIES_ENABLED = True
 
 # Enable or disable spider middlewares
 # See https://doc.scrapy.org/en/latest/topics/spider-middleware.html
-#SPIDER_MIDDLEWARES = {
-#    'recruit_spider.middlewares.RecruitSpiderSpiderMiddleware': 543,
-#}
+SPIDER_MIDDLEWARES = {
+   'recruit_spider.middlewares.RecruitSpiderSpiderMiddleware': 543,
+}
 
 # Enable or disable downloader middlewares
 # See https://doc.scrapy.org/en/latest/topics/downloader-middleware.html
 DOWNLOADER_MIDDLEWARES = {
-   'recruit_spider.middlewares.RecruitSpiderDownloaderMiddleware': 543,
+   'recruit_spider.middlewares.RecruitSpiderDownloaderMiddleware': 600,
 }
 
 # Enable or disable extensions
@@ -88,6 +89,13 @@ ITEM_PIPELINES = {
 #HTTPCACHE_DIR = 'httpcache'
 #HTTPCACHE_IGNORE_HTTP_CODES = []
 #HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
+
+REDIS_HOST = redis_host
+REDIS_PORT = redis_port
+
 DOWNLOAD_FAIL_ON_DATALOSS = False
 DOWNLOAD_TIMEOUT = 3
 REDIRECT_ENABLED = False
+
+# RETRY_ENABLED = False
+RETRY_TIMES = 5

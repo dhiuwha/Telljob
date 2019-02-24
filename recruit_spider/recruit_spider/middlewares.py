@@ -5,6 +5,7 @@
 # See documentation in:
 # https://doc.scrapy.org/en/latest/topics/spider-middleware.html
 import random
+import time
 
 from scrapy import signals
 
@@ -45,6 +46,7 @@ class RecruitSpiderSpiderMiddleware(object):
 
         # Should return either None or an iterable of Response, dict
         # or Item objects.
+        print('-------------spider exception--------------')
         pass
 
     def process_start_requests(self, start_requests, spider):
@@ -82,14 +84,32 @@ class RecruitSpiderDownloaderMiddleware(object):
         # - or return a Request object
         # - or raise IgnoreRequest: process_exception() methods of
         #   installed downloader middleware will be called
+
         request.headers['User-Agent'] = random.choice(user_agent)
-        if 'proxy_list' in request.meta:
-            proxy_obj = request.meta['proxy_list']
-            # print(proxy_obj.proxy)
-            request.meta['temp_proxy'] = proxy_obj.random_choose()
-            request.meta['proxy'] = proxy_obj.splice_ip(request.meta['temp_proxy'])
+
+        redis_conn = request.meta['redis_conn']
+        redis_member_num = redis_conn.scard('zhima_proxy')
+
+        if redis_member_num < 3:
+            if redis_conn.get('proxy_lock') != 'locked':
+                redis_conn.set('proxy_lock', 'locked')
+                Proxy(redis_conn).put_into_redis()
+                redis_conn.set('proxy_lock', 'released')
+            else:
+                time.sleep(1)
+
+        if 'https://www.lagou.com/jobs/positionAjax.json?' not in request.url:
+            proxy = redis_conn.srandmember('zhima_proxy')
+            request.meta['proxy'] = proxy
+
+        print(request.meta['proxy'])
+        # if 'proxy_list' in request.meta:
+        #     proxy_obj = request.meta['proxy_list']
+        #     # print(proxy_obj.proxy)
+        #     request.meta['temp_proxy'] = proxy_obj.random_choose()
+        #     request.meta['proxy'] = proxy_obj.splice_ip(request.meta['temp_proxy'])
             # raise TypeError
-        # pass
+        pass
 
     def process_response(self, request, response, spider):
         # Called with the response returned from the downloader.
@@ -104,7 +124,6 @@ class RecruitSpiderDownloaderMiddleware(object):
         return response
 
     def process_exception(self, request, exception, spider):
-        """代理失效时更换IP， IP池为空时重新获取IP"""
         # Called when a download handler or a process_request()
         # (from other downloader middleware) raises an exception.
 
@@ -112,13 +131,20 @@ class RecruitSpiderDownloaderMiddleware(object):
         # - return None: continue processing this exception
         # - return a Response object: stops process_exception() chain
         # - return a Request object: stops process_exception() chain
-        proxy_obj = request.meta['proxy_list']
-        if len(proxy_obj.proxy) == 0:
-            request.meta['proxy_list'] = Proxy()
-            proxy_obj = request.meta['proxy_list']
-        proxy_obj.proxy.remove(request.meta['temp_proxy'])
-        request.meta['temp_proxy'] = proxy_obj.random_choose()
-        request.meta['proxy'] = proxy_obj.splice_ip(request.meta['temp_proxy'])
+        print('---------------error--------------------')
+
+        redis_conn = request.meta['redis_conn']
+
+        redis_conn.srem('zhima_proxy', request.meta['proxy'])
+
+
+        # proxy_obj = request.meta['proxy_list']
+        # if len(proxy_obj.proxy) == 0:
+        #     request.meta['proxy_list'] = Proxy()
+        #     proxy_obj = request.meta['proxy_list']
+        # proxy_obj.proxy.remove(request.meta['temp_proxy'])
+        # request.meta['temp_proxy'] = proxy_obj.random_choose()
+        # request.meta['proxy'] = proxy_obj.splice_ip(request.meta['temp_proxy'])
         # return request
 
     def spider_opened(self, spider):
