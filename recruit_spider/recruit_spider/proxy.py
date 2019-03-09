@@ -3,7 +3,7 @@ import json
 import redis
 import requests
 
-from recruit_spider.config import proxy_api, redis_host, redis_port
+from recruit_spider.config import zhima_proxy_api, mogu_proxy_api
 
 
 class Proxy:
@@ -11,10 +11,15 @@ class Proxy:
     def __init__(self, redis_conn):
         self.redis_conn = redis_conn
 
+    # @staticmethod
+    # def get_proxy_json():
+    #     result = requests.get(zhima_proxy_api).content.decode('utf8')
+    #     return json.loads(result)['data']
+
     @staticmethod
     def get_proxy_json():
-        result = requests.get(proxy_api).content.decode('utf8')
-        return json.loads(result)['data']
+        result = requests.get(mogu_proxy_api).content.decode('utf8')
+        return json.loads(result)['msg']
 
     @staticmethod
     def splice_ip(proxy):

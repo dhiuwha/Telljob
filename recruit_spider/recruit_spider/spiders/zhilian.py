@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 import json
+import logging
+import time
 
 import scrapy
 from scrapy_redis.spiders import RedisSpider
@@ -40,6 +42,7 @@ class ZhilianSpider(RedisSpider):
     def detail_parse(self, response):
         item = response.meta['item']
         item['position_detail_info'] = self.get_position_detail_info(response)
+        item['insert_time'] = time.time()
         yield item
 
     @staticmethod

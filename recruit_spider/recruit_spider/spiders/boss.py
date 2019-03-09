@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+import logging
+import time
+
 import scrapy
 from scrapy_redis.spiders import RedisSpider
 
@@ -37,6 +40,7 @@ class BossSpider(RedisSpider):
             response.meta['basic_info']
         item['publish_time'] = response.meta['publish_time']
         item['position_detail_info'] = self.get_position_detail_info(response)
+        item['insert_time'] = time.time()
         return item
 
     @staticmethod
@@ -50,7 +54,7 @@ class BossSpider(RedisSpider):
 
     @staticmethod
     def get_company_name(position):
-        return position.xpath('//div[@class="sider-company"]/div[@class="company-info"]/a[last()]/text()').re('\w+')
+        return position.xpath('//div[@class="sider-company"]/div[@class="company-info"]/a[last()]/text()').re('\w+')[0]
 
     @staticmethod
     def get_company_url(position):
@@ -62,7 +66,7 @@ class BossSpider(RedisSpider):
 
     @staticmethod
     def get_position_salary(position):
-        return position.xpath('//div[@class="name"]/span[@class="salary"]/text()').re('\d+?-\d+?元')
+        return position.xpath('//div[@class="name"]/span[@class="salary"]/text()').re('\d+?-\d+?元')[0]
 
     @staticmethod
     def get_publish_time(position):

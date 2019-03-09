@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import re
+import time
 
 import redis
 import scrapy
@@ -37,6 +38,7 @@ class A51jobSpider(RedisSpider):
             self.get_position_basic_info(response).split('\xa0\xa0|\xa0\xa0')[:5]
         item['publish_time'] = re.search('\d{2}-\d{2}(?=发布)', item['publish_time']).group(0)
         item['position_detail_info'] = self.get_position_detail_info(response)
+        item['insert_time'] = time.time()
         yield item
 
     @staticmethod

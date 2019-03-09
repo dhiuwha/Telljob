@@ -11,7 +11,8 @@ import redis
 import requests
 from scrapy import signals
 
-from recruit_spider.config import user_agent, remove_proxy_api, get_proxy_api
+from recruit_spider.config import user_agent, remove_proxy_api, get_proxy_api, redis_host, redis_port
+from recruit_spider.proxy import Proxy
 
 
 class RecruitSpiderSpiderMiddleware(object):
@@ -68,6 +69,9 @@ class RecruitSpiderDownloaderMiddleware(object):
     # scrapy acts as if the downloader middleware does not modify the
     # passed objects.
 
+    redis_pool = redis.ConnectionPool(host=redis_host, port=redis_port, decode_responses=True)
+    redis_conn = redis.Redis(connection_pool=redis_pool)
+
     @classmethod
     def from_crawler(cls, crawler):
         # This method is used by Scrapy to create your spiders.
@@ -88,35 +92,19 @@ class RecruitSpiderDownloaderMiddleware(object):
 
         request.headers['User-Agent'] = random.choice(user_agent)
 
+        redis_member_num = self.redis_conn.scard('zhima_proxy')
+        #
+        if redis_member_num < 3:
+            if self.redis_conn.get('proxy_lock') != 'locked':
+                self.redis_conn.set('proxy_lock', 'locked')
+                Proxy(self.redis_conn).put_into_redis()
+                self.redis_conn.set('proxy_lock', 'released')
+            else:
+                time.sleep(1)
+
         if 'https://www.lagou.com/jobs/positionAjax.json?' not in request.url:
-            request.meta['proxy'] = requests.post(get_proxy_api).text
-
-        # redis_conn = request.meta.get('redis_conn')
-        # if not redis_conn:
-        #     redis_pool = redis.ConnectionPool(host=redis_host, port=redis_port, decode_responses=True)
-        #     redis_conn = redis.Redis(connection_pool=redis_pool)
-        # redis_member_num = redis_conn.scard('zhima_proxy')
-        #
-        # if redis_member_num < 3:
-        #     if redis_conn.get('proxy_lock') != 'locked':
-        #         redis_conn.set('proxy_lock', 'locked')
-        #         Proxy(redis_conn).put_into_redis()
-        #         redis_conn.set('proxy_lock', 'released')
-        #     else:
-        #         time.sleep(1)
-        #
-        # if 'https://www.lagou.com/jobs/positionAjax.json?' not in request.url:
-        #     proxy = redis_conn.srandmember('zhima_proxy')
-        #     request.meta['proxy'] = proxy
-
-        print(request.meta['proxy'])
-        # if 'proxy_list' in request.meta:
-        #     proxy_obj = request.meta['proxy_list']
-        #     # print(proxy_obj.proxy)
-        #     request.meta['temp_proxy'] = proxy_obj.random_choose()
-        #     request.meta['proxy'] = proxy_obj.splice_ip(request.meta['temp_proxy'])
-            # raise TypeError
-        pass
+            proxy = self.redis_conn.srandmember('zhima_proxy')
+            request.meta['proxy'] = proxy
 
     def process_response(self, request, response, spider):
         # Called with the response returned from the downloader.
@@ -138,21 +126,8 @@ class RecruitSpiderDownloaderMiddleware(object):
         # - return None: continue processing this exception
         # - return a Response object: stops process_exception() chain
         # - return a Request object: stops process_exception() chain
-        print('---------------error--------------------')
-        requests.post(remove_proxy_api, data={'failure_proxy': request.meta['proxy']})
-        # redis_conn = request.meta['redis_conn']
-        #
-        # redis_conn.srem('zhima_proxy', request.meta['proxy'])
 
-
-        # proxy_obj = request.meta['proxy_list']
-        # if len(proxy_obj.proxy) == 0:
-        #     request.meta['proxy_list'] = Proxy()
-        #     proxy_obj = request.meta['proxy_list']
-        # proxy_obj.proxy.remove(request.meta['temp_proxy'])
-        # request.meta['temp_proxy'] = proxy_obj.random_choose()
-        # request.meta['proxy'] = proxy_obj.splice_ip(request.meta['temp_proxy'])
-        # return request
+        self.redis_conn.srem('zhima_proxy', request.meta['proxy'])
 
     def spider_opened(self, spider):
         spider.logger.info('Spider opened: %s' % spider.name)

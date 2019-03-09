@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 import json
+import logging
 import re
+import time
 
 import redis
 import scrapy
@@ -17,18 +19,19 @@ class Lagou(RedisSpider):
 
     redis_key = 'lagou:start_urls'
 
+    redis_pool = redis.ConnectionPool(host=redis_host, port=redis_port, decode_responses=True)
+    redis_conn = redis.Redis(connection_pool=redis_pool)
+
     def make_requests_from_url(self, url):
         return scrapy.Request(url=url, callback=self.init_parse, dont_filter=True)
 
     def init_parse(self, response):
 
+        if 'https://www.lagou.com/utrack/verify.html' in response.url:
+            self.redis_conn.srem('zhima_proxy', response.meta['proxy'])
+            return self.start_requests()
+
         set_cookie = str(response.headers.getlist('Set-Cookie'))
-
-        print(set_cookie)
-
-        if not set_cookie:
-            print(1)
-            self.start_requests()
 
         JSESSIONID = re.search('JSESSIONID=.*?;', set_cookie).group(0)
         SEARCH_ID = re.search('SEARCH_ID=.*?;', set_cookie).group(0)
@@ -45,7 +48,6 @@ class Lagou(RedisSpider):
 
     def parse(self, response):
         data = json.loads(response.body.decode('utf8'))
-        print(data)
 
         for element in data['content']['positionResult']['result']:
             item = LaGouSpiderItem()
@@ -67,6 +69,7 @@ class Lagou(RedisSpider):
     def detail_parse(self, response):
         item = response.meta['item']
         item['position_detail_info'] = self.get_position_detail_info(response)
+        item['insert_time'] = time.time()
         yield item
 
     @staticmethod
