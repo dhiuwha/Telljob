@@ -5,10 +5,14 @@
 # See documentation in:
 # https://doc.scrapy.org/en/latest/topics/spider-middleware.html
 import random
+import time
 
+import redis
+import requests
 from scrapy import signals
 
-from recruit_spider.config import user_agent
+from recruit_spider.config import user_agent, remove_proxy_api, get_proxy_api, redis_host, redis_port
+from recruit_spider.proxy import Proxy
 
 
 class RecruitSpiderSpiderMiddleware(object):
@@ -44,6 +48,7 @@ class RecruitSpiderSpiderMiddleware(object):
 
         # Should return either None or an iterable of Response, dict
         # or Item objects.
+        print('-------------spider exception--------------')
         pass
 
     def process_start_requests(self, start_requests, spider):
@@ -64,6 +69,9 @@ class RecruitSpiderDownloaderMiddleware(object):
     # scrapy acts as if the downloader middleware does not modify the
     # passed objects.
 
+    redis_pool = redis.ConnectionPool(host=redis_host, port=redis_port, decode_responses=True)
+    redis_conn = redis.Redis(connection_pool=redis_pool)
+
     @classmethod
     def from_crawler(cls, crawler):
         # This method is used by Scrapy to create your spiders.
@@ -81,11 +89,22 @@ class RecruitSpiderDownloaderMiddleware(object):
         # - or return a Request object
         # - or raise IgnoreRequest: process_exception() methods of
         #   installed downloader middleware will be called
+
         request.headers['User-Agent'] = random.choice(user_agent)
-        print(request.headers)
-        # print(request.cookies)
-        # if spider.name == 'lagou':
-        #     request.headers['Cookie'] = ''
+
+        redis_member_num = self.redis_conn.scard('zhima_proxy')
+        #
+        if redis_member_num < 3:
+            if self.redis_conn.get('proxy_lock') != 'locked':
+                self.redis_conn.set('proxy_lock', 'locked')
+                Proxy(self.redis_conn).put_into_redis()
+                self.redis_conn.set('proxy_lock', 'released')
+            else:
+                time.sleep(1)
+
+        if 'https://www.lagou.com/jobs/positionAjax.json?' not in request.url:
+            proxy = self.redis_conn.srandmember('zhima_proxy')
+            request.meta['proxy'] = proxy
 
     def process_response(self, request, response, spider):
         # Called with the response returned from the downloader.
@@ -94,6 +113,9 @@ class RecruitSpiderDownloaderMiddleware(object):
         # - return a Response object
         # - return a Request object
         # - or raise IgnoreRequest
+        # print(spider.name, response.headers.getlist('Set-Cookie'))
+        # if spider.name == 'lagou' and response.headers.getlist('Set-Cookie') is []:
+        #     raise ConnectionError
         return response
 
     def process_exception(self, request, exception, spider):
@@ -104,7 +126,8 @@ class RecruitSpiderDownloaderMiddleware(object):
         # - return None: continue processing this exception
         # - return a Response object: stops process_exception() chain
         # - return a Request object: stops process_exception() chain
-        pass
+
+        self.redis_conn.srem('zhima_proxy', request.meta['proxy'])
 
     def spider_opened(self, spider):
         spider.logger.info('Spider opened: %s' % spider.name)

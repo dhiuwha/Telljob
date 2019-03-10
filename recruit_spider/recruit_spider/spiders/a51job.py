@@ -1,20 +1,29 @@
 # -*- coding: utf-8 -*-
 import re
+import time
 
+import redis
 import scrapy
+from scrapy_redis.spiders import RedisSpider
 
+from recruit_spider.config import redis_host, redis_port
 from recruit_spider.items import A51jobSpiderItem
 
 
-class A51jobSpider(scrapy.Spider):
+class A51jobSpider(RedisSpider):
     name = '51job'
 
-    start_urls = ['https://search.51job.com/list/120700,000000,0000,00,9,99,python,2,1.html']
+    redis_key = '51job:start_urls'
+
+    def make_requests_from_url(self, url):
+        return scrapy.Request(url=url, callback=self.parse, dont_filter=True)
 
     def parse(self, response):
+
         position_url = self.get_position_url(response)
         for url in position_url:
-            yield scrapy.Request(url=url, meta={'url': url}, callback=self.detail_parse, dont_filter=True)
+            yield scrapy.Request(url=url, meta={'url': url},
+                                 callback=self.detail_parse, dont_filter=True)
 
     def detail_parse(self, response):
         item = A51jobSpiderItem()
@@ -29,6 +38,7 @@ class A51jobSpider(scrapy.Spider):
             self.get_position_basic_info(response).split('\xa0\xa0|\xa0\xa0')[:5]
         item['publish_time'] = re.search('\d{2}-\d{2}(?=发布)', item['publish_time']).group(0)
         item['position_detail_info'] = self.get_position_detail_info(response)
+        item['insert_time'] = time.time()
         yield item
 
     @staticmethod

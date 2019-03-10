@@ -25,6 +25,7 @@ class A51jobSpiderItem(scrapy.Item):
     educational_requirement = scrapy.Field()
     header_count = scrapy.Field()
     publish_time = scrapy.Field()
+    insert_time = scrapy.Field()
 
     position_detail_info = scrapy.Field()
 
@@ -40,6 +41,7 @@ class BossSpiderItem(scrapy.Item):
     educational_requirement = scrapy.Field()
     header_count = scrapy.Field()
     publish_time = scrapy.Field()
+    insert_time = scrapy.Field()
 
     position_detail_info = scrapy.Field()
 
@@ -57,6 +59,7 @@ class ZhilianSpiderItem(scrapy.Item):
     create_time = scrapy.Field()
     update_time = scrapy.Field()
     end_time = scrapy.Field()
+    insert_time = scrapy.Field()
 
     position_detail_info = scrapy.Field()
 
@@ -72,5 +75,6 @@ class LaGouSpiderItem(scrapy.Item):
     educational_requirement = scrapy.Field()
     header_count = scrapy.Field()
     publish_time = scrapy.Field()
+    insert_time = scrapy.Field()
 
     position_detail_info = scrapy.Field()

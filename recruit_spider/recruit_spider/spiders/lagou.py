@@ -1,25 +1,35 @@
 # -*- coding: utf-8 -*-
 import json
+import logging
 import re
+import time
 
+import redis
 import scrapy
 import pymongo
-from recruit_spider.config import mongo_host
+from scrapy_redis.spiders import RedisSpider
+
+from recruit_spider.config import mongo_host, redis_host, redis_port
 from recruit_spider.items import LaGouSpiderItem
+from recruit_spider.proxy import Proxy
 
 
-class Lagou(scrapy.Spider):
+class Lagou(RedisSpider):
     name = 'lagou'
 
-    start_urls = ['https://www.lagou.com/jobs/list_python?px=default&city=%E4%B8%8A%E6%B5%B7']
+    redis_key = 'lagou:start_urls'
 
-    def start_requests(self):
-        yield scrapy.Request(
-            url='https://www.lagou.com/jobs/list_python?px=default&city=%E4%B8%8A%E6%B5%B7',
-            callback=self.init_parse
-        )
+    redis_pool = redis.ConnectionPool(host=redis_host, port=redis_port, decode_responses=True)
+    redis_conn = redis.Redis(connection_pool=redis_pool)
+
+    def make_requests_from_url(self, url):
+        return scrapy.Request(url=url, callback=self.init_parse, dont_filter=True)
 
     def init_parse(self, response):
+
+        if 'https://www.lagou.com/utrack/verify.html' in response.url:
+            self.redis_conn.srem('zhima_proxy', response.meta['proxy'])
+            return self.start_requests()
 
         set_cookie = str(response.headers.getlist('Set-Cookie'))
 
@@ -30,6 +40,7 @@ class Lagou(scrapy.Spider):
 
         return scrapy.FormRequest(
             url='https://www.lagou.com/jobs/positionAjax.json?px=default&city=%E4%B8%8A%E6%B5%B7&needAddtionalResult=false',
+            meta={'proxy': response.meta['proxy']},
             formdata={'first': 'true', 'pn': '1', 'kd': 'python'},
             headers={'Cookie': cookie},
             callback=self.parse
@@ -37,7 +48,7 @@ class Lagou(scrapy.Spider):
 
     def parse(self, response):
         data = json.loads(response.body.decode('utf8'))
-        print(data['content']['positionResult']['result'])
+
         for element in data['content']['positionResult']['result']:
             item = LaGouSpiderItem()
 
@@ -50,20 +61,20 @@ class Lagou(scrapy.Spider):
             item['educational_requirement'] = element['education']
             item['salary'] = element['salary']
             item['publish_time'] = element['createTime']
-            print(item['position_url'])
-            yield scrapy.Request(url=item['position_url'], meta={"item": item}, callback=self.detail_parse, dont_filter=True)
+
+            yield scrapy.Request(url=item['position_url'],
+                                 meta={"item": item},
+                                 callback=self.detail_parse, dont_filter=True)
 
     def detail_parse(self, response):
-        print(1)
         item = response.meta['item']
         item['position_detail_info'] = self.get_position_detail_info(response)
+        item['insert_time'] = time.time()
         yield item
 
     @staticmethod
     def get_position_detail_info(position):
-        content = position.xpath('//div[@class="job-detail"]/p/text()').re('[^\xa0]+')
-        # content.extend(position.xpath(
-        #         '//div[@class="responsibility pos-common"]/div[@class="pos-ul"]/descendant::*/text()').re('[^\xa0\s]+'))
+        content = position.xpath('//div[@class="content_l fl"]/dl[@class="job_detail"]/dd[@class="job_bt"]/div[@class="job-detail"]/descendant::*/text()').re('[^\xa0]+')
         return content
 
 

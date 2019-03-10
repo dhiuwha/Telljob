@@ -1,15 +1,23 @@
 # -*- coding: utf-8 -*-
+import logging
+import time
+
 import scrapy
+from scrapy_redis.spiders import RedisSpider
 
 from recruit_spider.items import BossSpiderItem
 
 
-class BossSpider(scrapy.Spider):
+class BossSpider(RedisSpider):
     name = 'boss'
-    # allowed_domains = ['www.zhipin.com']
-    start_urls = ['https://www.zhipin.com/job_detail/?query=python&scity=101010100&industry=&position=']
+
+    redis_key = 'boss:start_urls'
+
+    def make_requests_from_url(self, url):
+        return scrapy.Request(url=url, callback=self.parse, dont_filter=True)
 
     def parse(self, response):
+
         position_url = self.get_position_url(response)
         publish_time = self.get_publish_time(response)
         basic_info = self.get_position_basic_info(response)
@@ -18,8 +26,8 @@ class BossSpider(scrapy.Spider):
 
         for url, publish_time, basic_info in map(lambda x, y, z: [x, y, z], position_url, publish_time, basic_info):
             url = "https://www.zhipin.com" + url
-            yield scrapy.Request(url=url, meta={'url': url, 'publish_time': publish_time, 'basic_info': basic_info},
-                                 callback=self.detail_parse, dont_filter=True)
+            yield scrapy.Request(url=url, callback=self.detail_parse, dont_filter=True,
+                                 meta={'url': url, 'publish_time': publish_time, 'basic_info': basic_info})
 
     def detail_parse(self, response):
         item = BossSpiderItem()
@@ -32,6 +40,7 @@ class BossSpider(scrapy.Spider):
             response.meta['basic_info']
         item['publish_time'] = response.meta['publish_time']
         item['position_detail_info'] = self.get_position_detail_info(response)
+        item['insert_time'] = time.time()
         return item
 
     @staticmethod
@@ -45,7 +54,7 @@ class BossSpider(scrapy.Spider):
 
     @staticmethod
     def get_company_name(position):
-        return position.xpath('//div[@class="sider-company"]/div[@class="company-info"]/a[last()]/text()').re('\w+')
+        return position.xpath('//div[@class="sider-company"]/div[@class="company-info"]/a[last()]/text()').re('\w+')[0]
 
     @staticmethod
     def get_company_url(position):
@@ -57,7 +66,7 @@ class BossSpider(scrapy.Spider):
 
     @staticmethod
     def get_position_salary(position):
-        return position.xpath('//div[@class="name"]/span[@class="salary"]/text()').re('\d+?-\d+?元')
+        return position.xpath('//div[@class="name"]/span[@class="salary"]/text()').re('\d+?-\d+?元')[0]
 
     @staticmethod
     def get_publish_time(position):

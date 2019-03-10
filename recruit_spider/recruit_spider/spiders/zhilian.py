@@ -1,14 +1,21 @@
 # -*- coding: utf-8 -*-
 import json
+import logging
+import time
 
 import scrapy
+from scrapy_redis.spiders import RedisSpider
 
 from recruit_spider.items import ZhilianSpiderItem
 
 
-class ZhilianSpider(scrapy.Spider):
+class ZhilianSpider(RedisSpider):
     name = 'zhilian'
-    start_urls = ['https://fe-api.zhaopin.com/c/i/sou?pageSize=90&cityId=538&workExperience=-1&education=-1&companyType=-1&employmentType=-1&jobWelfareTag=-1&kw=python&kt=3']
+
+    redis_key = 'zhilian:start_urls'
+
+    def make_requests_from_url(self, url):
+        return scrapy.Request(url=url, callback=self.parse, dont_filter=True)
 
     def parse(self, response):
 
@@ -29,11 +36,13 @@ class ZhilianSpider(scrapy.Spider):
             item['end_time'] = element['endDate']
             item['header_count'] = element['recruitCount']
             # if item['position_url'] == 'https://jobs.zhaopin.com/CC263265337J00086662006.htm':
-            yield scrapy.Request(url=item['position_url'], meta={"item": item}, callback=self.detail_parse, dont_filter=True)
+            yield scrapy.Request(url=item['position_url'], meta={"item": item},
+                                 callback=self.detail_parse, dont_filter=True)
 
     def detail_parse(self, response):
         item = response.meta['item']
         item['position_detail_info'] = self.get_position_detail_info(response)
+        item['insert_time'] = time.time()
         yield item
 
     @staticmethod
