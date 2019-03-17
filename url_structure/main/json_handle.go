@@ -10,6 +10,7 @@ import (
 
 type PositionInfo struct {
 	Source    string `form:"source" json:"source"`
+	Address   string `form:"address" json:"address"`
 	Keyword   string `form:"keyword" json:"keyword"`
 	Timestamp int    `form:"timestamp" json:"timestamp"`
 }
@@ -22,9 +23,11 @@ func startPage(c *gin.Context) {
 	if c.ShouldBindJSON(&person) != nil {
 		log.Println("====== Only Bind By Query String ======")
 		log.Println(person)
-		log.Println(person.Source)
+		source := strings.Split(person.Address, ",")
+		address := strings.Split(person.Source, ",")
+		log.Println(source)
+		log.Println(address)
 		log.Println(person.Keyword)
-		log.Println(person.Timestamp)
 	}
 	c.JSON(200, gin.H{
 		"status": "Success",

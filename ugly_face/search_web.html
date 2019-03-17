@@ -70,17 +70,22 @@
         }
     }
 </script>
-<input type="text">
+<label>
+    <input type="text" class="keyword">
+</label>
 <input type="button" value="搜索" onclick="search_button_click()">
 <script>
     function search_button_click() {
         let platform = get_chosen_platform();
         let city = get_chosen_city();
-        get_position(platform, city);
+        let keyword = document.getElementsByClassName('keyword')[0].value;
+        console.log(keyword);
+        get_position(platform, city, keyword);
     }
 
     function get_chosen_platform(){
         let chosen_platform = document.getElementsByClassName('chosen_platform');
+        if (chosen_platform.length === 0) chosen_platform = document.getElementsByClassName('ignored_platform');
         let platform = '';
         for(const p of chosen_platform){
             platform += p.text + ',';
@@ -91,6 +96,7 @@
 
     function get_chosen_city(){
         let chosen_city = document.getElementsByClassName('chosen_city');
+        if (chosen_city.length === 0) chosen_city = document.getElementsByClassName('ignored_city');
         let city = '';
         for(const p of chosen_city){
             city += p.text + ',';
@@ -99,11 +105,11 @@
         return city.slice(0, -1);
     }
 
-    function get_position(platform, city) {
+    function get_position(platform, city, keyword) {
         fetch("http://localhost:5000/post",
             {
                 method: 'POST',
-                body: JSON.stringify({source: platform, keyword: city, timestamp:'c'}),
+                body: JSON.stringify({source: platform, address: city, keyword: keyword, timestamp:'c'}),
                 headers: new Headers({"content-type": "application/json"})
             }).then(function(response) {
             return response.json();

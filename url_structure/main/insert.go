@@ -1,28 +1,13 @@
 package main
 
 import (
-	"../config"
+	"../dao"
 	"fmt"
-	"github.com/garyburd/redigo/redis"
 )
 
 func main() {
-	c, err := redis.Dial("tcp", config.RedisHost+":"+config.RedisPort)
-	if err != nil {
-		fmt.Println("Connect to redis error", err)
-		return
-	}
-	defer c.Close()
-
-	_, err = c.Do("SET", "mykey", "superWang")
-	if err != nil {
-		fmt.Println("redis set failed:", err)
-	}
-
-	username, err := redis.String(c.Do("GET", "mykey"))
-	if err != nil {
-		fmt.Println("redis get failed:", err)
-	} else {
-		fmt.Printf("Get mykey: %v \n", username)
+	dao.RedisInsert([]string{"拉勾"}, []string{"b"}, "c")
+	for k, v := range map[string]string{"a": "1", "b": "2"} {
+		fmt.Println(k, v)
 	}
 }
