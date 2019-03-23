@@ -2,6 +2,7 @@ package process
 
 import (
 	"../dao"
+	"fmt"
 	"github.com/globalsign/mgo/bson"
 )
 
@@ -18,36 +19,43 @@ type Data struct {
 	//PositionUrl            string `bson:"position_url"`
 	CompanyName string `bson:"company_name"`
 	//CompanyUrl             string `bson:"company_url"`
-	WorkingPlace           string `bson:"working_place"`
-	ExperienceRequirement  string `bson:"experience_requirement"`
-	EducationalRequirement string `bson:"educational_requirement"`
-	Salary                 string `bson:"salary"`
-	CreateTime             string `bson:"create_time"`
+	WorkingPlace           string   `bson:"working_place"`
+	ExperienceRequirement  string   `bson:"experience_requirement"`
+	EducationalRequirement string   `bson:"educational_requirement"`
+	Salary                 string   `bson:"salary"`
+	CreateTime             string   `bson:"publish_time"`
+	PositionDetailInfo     []string `bson:"position_detail_info"`
 }
 
-type total []single
-type single map[string]detail
+type single struct {
+	FirstInfo  detail
+	SecondInfo detail
+}
+
+type total map[string][]Data
 type detail []string
 
-func Build(city, platform []string, keyword string) []single {
-	var result total
-	for _, element := range GetAll(city, platform, keyword) {
-		firstInfo := detail{element.PositionName, element.CompanyName, element.Salary}
-		secondInfo := detail{element.WorkingPlace, element.ExperienceRequirement, element.EducationalRequirement}
-		result = append(result, single{"first_info": firstInfo, "second_info": secondInfo})
+func BuildTotal(city, platform []string, keyword string) map[string][]Data {
+	result := make(total)
+	for k, v := range GetAll(city, platform, keyword) {
+		result[k] = append(result[k], v...)
 	}
 	return result
 }
 
-func GetAll(city, platform []string, keyword string) []Data {
+func BuildSingle(id, platform string) Data {
+	return GetOne(bson.ObjectIdHex(id), platform)
+}
 
-	var result []Data
+func GetAll(city, platform []string, keyword string) map[string][]Data {
+
+	result := make(map[string][]Data)
 	for _, p := range platform {
 		conn, cursor := dao.Connect("tell_job", platformMap[p])
 		for _, c := range city {
 			var data []Data
 			dao.FindAll(cursor, bson.M{"keyword": keyword, "city": c}, &data)
-			result = append(result, data...)
+			result[platformMap[p]] = append(result[platformMap[p]], data...)
 		}
 		conn.Close()
 	}
@@ -58,7 +66,7 @@ func GetOne(id bson.ObjectId, platform string) Data {
 	var data Data
 	conn, cursor := dao.Connect("tell_job", platform)
 	defer conn.Close()
-	dao.FindAll(cursor, bson.M{"_id": id}, &data)
-	//bson.ObjectIdHex("5c8378161e95dc0f04c1a4c2")
+	dao.FindOne(cursor, bson.M{"_id": id}, &data)
+	fmt.Println(data)
 	return data
 }

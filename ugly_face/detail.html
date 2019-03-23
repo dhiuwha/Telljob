@@ -1,0 +1,19 @@
+{{define "detail.tmpl"}}
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Title</title>
+    </head>
+    <body>
+        {{with .detail}}
+            <p>{{.PositionName}} | {{.Salary}}</p>
+            <p>{{.CompanyName}} </p>
+            <p>{{.WorkingPlace}} | {{.ExperienceRequirement}} | {{.EducationalRequirement}} | {{.CreateTime}}</p>
+            {{range .PositionDetailInfo}}
+                <p>{{.}}</p>
+            {{end}}
+        {{end}}
+    </body>
+    </html>
+{{end}}

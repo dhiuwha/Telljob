@@ -1,0 +1,32 @@
+{{define "spider.tmpl"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<!--城市-->
+{{range .city}}
+    {{.}}
+{{end}}
+<br>
+<!--平台-->
+{{range .platform}}
+    {{. }}
+{{end}}
+<br><br>
+<!--职位-->
+
+{{range $k, $v := .info}}
+    {{range $v}}
+        <div>
+            <p><a href={{buildUrl .Id $k}}>{{.PositionName}}</a> | {{.CompanyName}} | {{.Salary}}</p>
+            <p>{{.WorkingPlace}} | {{.ExperienceRequirement}} | {{.EducationalRequirement}} | {{.CreateTime}}</p>
+        </div>
+    {{end}}
+{{end}}
+
+</body>
+</html>
+{{end}}

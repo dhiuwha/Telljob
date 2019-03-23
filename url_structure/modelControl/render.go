@@ -4,7 +4,8 @@ import (
 	"../process"
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"log"
+	"github.com/globalsign/mgo/bson"
+	"html/template"
 	"net/http"
 	"strings"
 )
@@ -16,28 +17,21 @@ type PositionInfo struct {
 	Timestamp int    `form:"timestamp" json:"timestamp"`
 }
 
-type total []map[string][]string
-type single map[string][]string
-type detail []string
-
 var city = make([]string, 1)
 var platform = make([]string, 1)
 var keyword string
 
+func BuildUrl(id bson.ObjectId, platform string) string {
+	fmt.Println(id.Hex())
+	return "http://localhost:5000/position?id=" + id.Hex() + "&platform=" + platform
+}
+
 func startPage(c *gin.Context) {
 	var person PositionInfo
-	// 将 url 查询参数和person绑定在一起
-	//d, _ := c.GetRawData()
-	//log.Println(string(d))
 	if c.ShouldBindJSON(&person) != nil {
-		log.Println("====== Only Bind By Query String ======")
-		log.Println(person)
 		city = strings.Split(person.Address, ",")
 		platform = strings.Split(person.Source, ",")
 		keyword = person.Keyword
-		log.Println(city)
-		log.Println(platform)
-		log.Println(keyword)
 	}
 	c.JSON(200, gin.H{
 		"status": "Success",
@@ -46,9 +40,19 @@ func startPage(c *gin.Context) {
 
 func jobPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "spider.tmpl", gin.H{
-		"city":     city,
-		"platform": platform,
-		"info":     process.Build(city, platform, keyword),
+		"city":      city,
+		"platform":  platform,
+		"info":      process.BuildTotal(city, platform, keyword),
+		"build_url": BuildUrl,
+	})
+}
+
+func queryPosition(c *gin.Context) {
+	id := c.Query("id")
+	platform := c.Query("platform")
+	fmt.Println(id)
+	c.HTML(http.StatusOK, "detail.tmpl", gin.H{
+		"detail": process.BuildSingle(id, platform),
 	})
 }
 
@@ -91,8 +95,13 @@ func Cors() gin.HandlerFunc {
 func Router() {
 	router := gin.Default()
 	router.Use(Cors())
-	router.LoadHTMLFiles("ugly_face/template.html")
+	router.SetFuncMap(template.FuncMap{
+		"buildUrl": BuildUrl,
+	})
+	router.LoadHTMLFiles("ugly_face/basic.html", "ugly_face/detail.html")
+
 	router.POST("/post", startPage)
 	router.GET("/upload", jobPage)
+	router.GET("/position", queryPosition)
 	_ = router.Run("0.0.0.0:5000")
 }
