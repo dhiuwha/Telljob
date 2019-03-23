@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<a class="choose_all_city" href="javascript:" onclick="choose_all_city(this)">不限</a>
+<a class="ignored_city" href="javascript:" onclick="city_status_change(this)">北京</a>
+<a class="ignored_city" href="javascript:" onclick="city_status_change(this)">上海</a>
+<a class="ignored_city" href="javascript:" onclick="city_status_change(this)">广州</a>
+<a class="ignored_city" href="javascript:" onclick="city_status_change(this)">深圳</a>
+<br>
+<a class="choose_all_platform" href="javascript:" onclick="choose_all_platform(this)">不限</a>
+<a class="ignored_platform" href="javascript:" onclick="platform_status_change(this)">拉勾</a>
+<a class="ignored_platform" href="javascript:" onclick="platform_status_change(this)">智联</a>
+<a class="ignored_platform" href="javascript:" onclick="platform_status_change(this)">直聘</a>
+<a class="ignored_platform" href="javascript:" onclick="platform_status_change(this)">51</a>
+<br>
+<script>
+    function choose_all_city(dom) {
+        dom.setAttribute('class', 'choose_all_city');
+        for(let d of document.querySelectorAll('a.chosen_city')){
+            d.setAttribute('class', 'ignored_city');
+        }
+    }
+
+    function choose_all_platform(dom) {
+        dom.setAttribute('class', 'choose_all_platform');
+        for(let d of document.querySelectorAll('a.chosen_platform')){
+            d.setAttribute('class', 'ignored_platform');
+        }
+    }
+
+    function platform_status_change(dom){
+        console.log(dom.className);
+        let choose_dom = document.getElementsByClassName('chosen_platform');
+        if (dom.className === 'chosen_platform'){
+
+            if ( choose_dom.length === 1){
+                document.getElementsByClassName('ignore_all_platform')[0].setAttribute('class', 'choose_all_platform')
+            }
+            else dom.setAttribute('class', 'ignored_platform')
+        }else {
+            let ignore_dom = document.getElementsByClassName('ignored_platform');
+            if ( ignore_dom.length === 1) choose_all_platform(document.getElementsByClassName('ignore_all_platform')[0]);
+            else {
+                if (choose_dom.length === 0) document.getElementsByClassName('choose_all_platform')[0].setAttribute('class', 'ignore_all_platform');
+                dom.setAttribute('class', 'chosen_platform');
+            }
+        }
+    }
+
+    function city_status_change(dom){
+        console.log(dom.className);
+        let choose_dom = document.getElementsByClassName('chosen_city');
+        if (dom.className === 'chosen_city'){
+
+            if ( choose_dom.length === 1){
+                document.getElementsByClassName('ignore_all_city')[0].setAttribute('class', 'choose_all_city')
+            }
+            else dom.setAttribute('class', 'ignored_city')
+        }else {
+            let ignore_dom = document.getElementsByClassName('ignored_city');
+            if ( ignore_dom.length === 1) choose_all_city(document.getElementsByClassName('ignore_all_city')[0]);
+            else {
+                if (choose_dom.length === 0) document.getElementsByClassName('choose_all_city')[0].setAttribute('class', 'ignore_all_city');
+                dom.setAttribute('class', 'chosen_city');
+            }
+        }
+    }
+</script>
+<label>
+    <input type="text" class="keyword">
+</label>
+<input type="button" value="搜索" onclick="search_button_click()">
+<script>
+    function search_button_click() {
+        let platform = get_chosen_platform();
+        let city = get_chosen_city();
+        let keyword = document.getElementsByClassName('keyword')[0].value;
+        console.log(keyword);
+        get_position(platform, city, keyword);
+    }
+
+    function get_chosen_platform(){
+        let chosen_platform = document.getElementsByClassName('chosen_platform');
+        if (chosen_platform.length === 0) chosen_platform = document.getElementsByClassName('ignored_platform');
+        let platform = '';
+        for(const p of chosen_platform){
+            platform += p.text + ',';
+        }
+
+        return platform.slice(0, -1);
+    }
+
+    function get_chosen_city(){
+        let chosen_city = document.getElementsByClassName('chosen_city');
+        if (chosen_city.length === 0) chosen_city = document.getElementsByClassName('ignored_city');
+        let city = '';
+        for(const p of chosen_city){
+            city += p.text + ',';
+        }
+
+        return city.slice(0, -1);
+    }
+
+    function get_position(platform, city, keyword) {
+        fetch("http://localhost:5000/post",
+            {
+                method: 'POST',
+                body: JSON.stringify({source: platform, address: city, keyword: keyword, timestamp:'c'}),
+                headers: new Headers({"content-type": "application/json"})
+            }).then(function(response) {
+            return response.json();
+        }).then(function(myJson) {
+            console.log(myJson.status);
+        });
+        window.location.href = "http://localhost:5000/upload"
+    }
+</script>
+</body>
+</html>
