@@ -1,6 +1,7 @@
-package main
+package modelControl
 
 import (
+	"../process"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"log"
@@ -15,6 +16,14 @@ type PositionInfo struct {
 	Timestamp int    `form:"timestamp" json:"timestamp"`
 }
 
+type total []map[string][]string
+type single map[string][]string
+type detail []string
+
+var city = make([]string, 1)
+var platform = make([]string, 1)
+var keyword string
+
 func startPage(c *gin.Context) {
 	var person PositionInfo
 	// 将 url 查询参数和person绑定在一起
@@ -23,14 +32,23 @@ func startPage(c *gin.Context) {
 	if c.ShouldBindJSON(&person) != nil {
 		log.Println("====== Only Bind By Query String ======")
 		log.Println(person)
-		source := strings.Split(person.Address, ",")
-		address := strings.Split(person.Source, ",")
-		log.Println(source)
-		log.Println(address)
-		log.Println(person.Keyword)
+		city = strings.Split(person.Address, ",")
+		platform = strings.Split(person.Source, ",")
+		keyword = person.Keyword
+		log.Println(city)
+		log.Println(platform)
+		log.Println(keyword)
 	}
 	c.JSON(200, gin.H{
 		"status": "Success",
+	})
+}
+
+func jobPage(c *gin.Context) {
+	c.HTML(http.StatusOK, "spider.tmpl", gin.H{
+		"city":     city,
+		"platform": platform,
+		"info":     process.Build(city, platform, keyword),
 	})
 }
 
@@ -70,15 +88,11 @@ func Cors() gin.HandlerFunc {
 	}
 }
 
-func Route() {
-	// 初始化引擎
+func Router() {
 	router := gin.Default()
 	router.Use(Cors())
-	// 注册一个路由和处理函数
-	router.Any("/post", startPage)
+	router.LoadHTMLFiles("ugly_face/template.html")
+	router.POST("/post", startPage)
+	router.GET("/upload", jobPage)
 	_ = router.Run("0.0.0.0:5000")
-}
-
-func main() {
-	Route()
 }
