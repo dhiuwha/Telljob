@@ -94,7 +94,7 @@ class RecruitSpiderDownloaderMiddleware(object):
 
         redis_member_num = self.redis_conn.scard('zhima_proxy')
         #
-        if redis_member_num < 3:
+        if redis_member_num < 5:
             if self.redis_conn.get('proxy_lock') != 'locked':
                 self.redis_conn.set('proxy_lock', 'locked')
                 Proxy(self.redis_conn).put_into_redis()
