@@ -11,15 +11,15 @@ class Proxy:
     def __init__(self, redis_conn):
         self.redis_conn = redis_conn
 
-    # @staticmethod
-    # def get_proxy_json():
-    #     result = requests.get(zhima_proxy_api).content.decode('utf8')
-    #     return json.loads(result)['data']
-
     @staticmethod
     def get_proxy_json():
-        result = requests.get(mogu_proxy_api).content.decode('utf8')
-        return json.loads(result)['msg']
+        result = requests.get(zhima_proxy_api).content.decode('utf8')
+        return json.loads(result)['data']
+
+    # @staticmethod
+    # def get_proxy_json():
+    #     result = requests.get(mogu_proxy_api).content.decode('utf8')
+    #     return json.loads(result)['msg']
 
     @staticmethod
     def splice_ip(proxy):

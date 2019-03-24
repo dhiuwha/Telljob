@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import datetime
 import json
 import logging
 import re
@@ -23,35 +24,43 @@ class Lagou(RedisSpider):
     redis_conn = redis.Redis(connection_pool=redis_pool)
 
     def make_requests_from_url(self, url):
-        return scrapy.Request(url=url, callback=self.init_parse, dont_filter=True)
+        info = re.search('(?<=&suginput=).*', url).group(0)
+        return scrapy.Request(url=url.replace(info, ""), meta=json.loads(info), callback=self.init_parse, dont_filter=True)
 
     def init_parse(self, response):
 
         if 'https://www.lagou.com/utrack/verify.html' in response.url:
             self.redis_conn.srem('zhima_proxy', response.meta['proxy'])
-            return self.start_requests()
-
+            return scrapy.Request(url=response.url, meta=response.meta, callback=self.init_parse, dont_filter=True)
+        logging.info('---------------init:' + response.url)
         set_cookie = str(response.headers.getlist('Set-Cookie'))
-
-        JSESSIONID = re.search('JSESSIONID=.*?;', set_cookie).group(0)
-        SEARCH_ID = re.search('SEARCH_ID=.*?;', set_cookie).group(0)
-        LGRID = re.search('LGRID=.*?(?=;)', set_cookie).group(0)
-        cookie = JSESSIONID + SEARCH_ID + LGRID
-
-        return scrapy.FormRequest(
-            url='https://www.lagou.com/jobs/positionAjax.json?px=default&city=%E4%B8%8A%E6%B5%B7&needAddtionalResult=false',
-            meta={'proxy': response.meta['proxy']},
-            formdata={'first': 'true', 'pn': '1', 'kd': 'python'},
+        try:
+            JSESSIONID = re.search('JSESSIONID=.*?;', set_cookie).group(0)
+            SEARCH_ID = re.search('SEARCH_ID=.*?;', set_cookie).group(0)
+            LGRID = re.search('LGRID=.*?(?=;)', set_cookie).group(0)
+            cookie = JSESSIONID + SEARCH_ID + LGRID
+        except AttributeError:
+            self.redis_conn.srem('zhima_proxy', response.meta['proxy'])
+            return scrapy.Request(url=response.url, meta=response.meta, callback=self.init_parse, dont_filter=True)
+        logging.info(cookie)
+        logging.info({'first': 'true' if response.meta['page'] == '1' else 'false', 'pn': response.meta['page'], 'kd': response.meta['keyword']})
+        yield scrapy.FormRequest(
+            url='https://www.lagou.com/jobs/positionAjax.json?px=default&city=' + response.meta['city'] + '&needAddtionalResult=false',
+            meta=dict({'proxy': response.meta['proxy']}, **response.meta),
+            formdata={'first': 'true' if response.meta['page'] == '1' else 'false', 'pn': response.meta['page'], 'kd': response.meta['keyword']},
             headers={'Cookie': cookie},
             callback=self.parse
         )
 
     def parse(self, response):
         data = json.loads(response.body.decode('utf8'))
+        logging.info(data)
 
         for element in data['content']['positionResult']['result']:
             item = LaGouSpiderItem()
 
+            item['city'] = response.meta['city']
+            item['keyword'] = response.meta['keyword']
             item['position_name'] = element['positionName']
             item['position_url'] = "https://www.lagou.com/jobs/" + str(element['positionId']) + ".html"
             item['company_name'] = element['companyFullName']
@@ -67,14 +76,21 @@ class Lagou(RedisSpider):
                                  callback=self.detail_parse, dont_filter=True)
 
     def detail_parse(self, response):
+        logging.info('-----------------' + response.url)
+        if ' https://www.lagou.com/utrack/verify.html' in response.url:
+            logging.info('---------------enter')
+            self.redis_conn.srem('zhima_proxy', response.meta['proxy'])
+            return scrapy.Request(url=response.meta['item'],
+                                  meta={"item": response.meta['item']},
+                                  callback=self.detail_parse, dont_filter=True)
         item = response.meta['item']
         item['position_detail_info'] = self.get_position_detail_info(response)
-        item['insert_time'] = time.time()
-        yield item
+        item['insert_time'] = datetime.datetime.now()
+        return item
 
     @staticmethod
     def get_position_detail_info(position):
-        content = position.xpath('//div[@class="content_l fl"]/dl[@class="job_detail"]/dd[@class="job_bt"]/div[@class="job-detail"]/descendant::*/text()').re('[^\xa0]+')
+        content = position.xpath('//div[@class="content_l fl"]//dd[@class="job_bt"]/descendant::*/text()').re('[^\xa0]+')
         return content
 
 
