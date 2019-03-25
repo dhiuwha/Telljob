@@ -80,7 +80,7 @@ class Lagou(RedisSpider):
         if ' https://www.lagou.com/utrack/verify.html' in response.url:
             logging.info('---------------enter')
             self.redis_conn.srem('zhima_proxy', response.meta['proxy'])
-            return scrapy.Request(url=response.meta['item'],
+            return scrapy.Request(url=response.meta['item']['position_url'],
                                   meta={"item": response.meta['item']},
                                   callback=self.detail_parse, dont_filter=True)
         item = response.meta['item']
