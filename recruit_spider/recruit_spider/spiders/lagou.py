@@ -25,58 +25,85 @@ class Lagou(RedisSpider):
 
     def make_requests_from_url(self, url):
         info = re.search('(?<=&suginput=).*', url).group(0)
-        return scrapy.Request(url=url.replace(info, ""), meta=json.loads(info), callback=self.init_parse, dont_filter=True)
+        url = url.replace(info, "")
+        info = json.loads(info)
+        info['init_url'] = url
+        return scrapy.Request(url=url, meta=info, callback=self.init_parse, dont_filter=True)
 
-    def init_parse(self, response):
-
-        if 'https://www.lagou.com/utrack/verify.html' in response.url:
+    def init_parse(self, response, a=None):
+        logging.info(response.url)
+        # if not a:
+        #     return scrapy.Request(response.url, meta={"a": 1}, callback=self.init_parse, dont_filter=True)
+        # else:
+        #     print(1)
+        #     yield scrapy.Request(response.url, meta={"a": 1}, callback=self.init_parse, dont_filter=True)
+        if 'https://www.lagou.com/utrack/' in response.url:
+            time.sleep(2)
             self.redis_conn.srem('zhima_proxy', response.meta['proxy'])
-            return scrapy.Request(url=response.url, meta=response.meta, callback=self.init_parse, dont_filter=True)
-        logging.info('---------------init:' + response.url)
-        set_cookie = str(response.headers.getlist('Set-Cookie'))
-        try:
-            JSESSIONID = re.search('JSESSIONID=.*?;', set_cookie).group(0)
-            SEARCH_ID = re.search('SEARCH_ID=.*?;', set_cookie).group(0)
-            LGRID = re.search('LGRID=.*?(?=;)', set_cookie).group(0)
-            cookie = JSESSIONID + SEARCH_ID + LGRID
-        except AttributeError:
-            self.redis_conn.srem('zhima_proxy', response.meta['proxy'])
-            return scrapy.Request(url=response.url, meta=response.meta, callback=self.init_parse, dont_filter=True)
-        if response.meta["page"] != '1':
-            yield scrapy.FormRequest(
-                url='https://a.lagou.com/collect?v=1&_v=j31&a=1260963230&t=pageview&_s=1&dl=https%3A%2F%2Fwww.lagou.com%2Fjobs%2F' + \
-                    'list_' + response.meta['keyword'] + '%3Fpx%3Dnew%26city%3D%25' + response.meta['city'] + '&dr=https%3A%2F%2Fwww.lagou.com' + \
-                    '%2Fzhaopin%2F&ul=zh-cn&de=UTF-8&dt=%E6%89%BE%E5%B7%A5%E4%BD%9C-%E4%BA%92%E8%81%94%E7%BD%91%E6%8B%9B%E8%81%98%E6%B1%82%E8%81%8C%E7%BD%91-'
-                    '%E6%8B%89%E5%8B%BE%E7%BD%91&sd=24-bit&sr=1716x927&vp=718x813&je=0&_u=MEAAAAQBK~&jid=959634670&cid=190625864.1553575548&tid=UA-41268416-1&_r=1&z=795162837',
-                meta=dict({'proxy': response.meta['proxy']}, **response.meta, **{'JSESSIONID': JSESSIONID, 'SEARCH_ID': SEARCH_ID}, **{'url': response.url}),
-                headers={'Cookie': cookie, 'Referer': response.url},
-                callback=self.not_first_page
-            )
+            logging.info(response.meta['init_url'])
+            return scrapy.Request(url=response.meta['init_url'], meta=response.meta, callback=self.init_parse, dont_filter=True)
         else:
-            yield scrapy.FormRequest(
-                url='https://www.lagou.com/jobs/positionAjax.json?px=default&city=' + response.meta['city'] + '&needAddtionalResult=false',
-                meta=dict({'proxy': response.meta['proxy']}, **response.meta),
-                formdata={'first': 'true', 'pn': '1', 'kd': response.meta['keyword']},
-                headers={'Cookie': cookie},
-                callback=self.parse
-            )
+            print('-----------------not verify')
+            set_cookie = str(response.headers.getlist('Set-Cookie'))
+            logging.info(set_cookie)
+            try:
+                JSESSIONID = re.search('JSESSIONID=.*?;', set_cookie).group(0)
+                SEARCH_ID = re.search('SEARCH_ID=.*?;', set_cookie).group(0)
+                try:
+                    user_trace_token = re.search('user_trace_token=.*?;', set_cookie).group(0)
+                except AttributeError:
+                    user_trace_token = ''
+                X_HTTP_TOKEN = re.search('X_HTTP_TOKEN=.*?(?=;)', set_cookie).group(0)
+
+            except AttributeError:
+                # self.redis_conn.srem('zhima_proxy', response.meta['proxy'])
+                return scrapy.Request(url=response.meta['init_url'], meta=response.meta, callback=self.init_parse, dont_filter=True)
+            cookie = JSESSIONID + SEARCH_ID + user_trace_token + X_HTTP_TOKEN
+            if response.meta["page"] != '1':
+                return scrapy.FormRequest(
+                    url='https://a.lagou.com/collect?v=1&_v=j31&a=1260963230&t=pageview&_s=1&dl=https%3A%2F%2Fwww.lagou.com%2Fjobs%2F' + \
+                        'list_' + response.meta['keyword'] + '%3Fpx%3Dnew%26city%3D%25' + response.meta['city'] + '&dr=https%3A%2F%2Fwww.lagou.com' + \
+                        '%2Fzhaopin%2F&ul=zh-cn&de=UTF-8&dt=%E6%89%BE%E5%B7%A5%E4%BD%9C-%E4%BA%92%E8%81%94%E7%BD%91%E6%8B%9B%E8%81%98%E6%B1%82%E8%81%8C%E7%BD%91-'
+                        '%E6%8B%89%E5%8B%BE%E7%BD%91&sd=24-bit&sr=1716x927&vp=718x813&je=0&_u=MEAAAAQBK~&jid=959634670&cid=190625864.1553575548&tid=UA-41268416-1&_r=1&z=795162837',
+                    meta=dict({'proxy': response.meta['proxy']}, **response.meta,
+                              **{'JSESSIONID': JSESSIONID, 'SEARCH_ID': SEARCH_ID, 'user_trace_token': user_trace_token, 'X_HTTP_TOKEN': X_HTTP_TOKEN},
+                              **{'url': response.url}),
+                    headers={'Cookie': cookie, 'Referer': response.url},
+                    callback=self.not_first_page,
+                    dont_filter=True
+                )
+            else:
+                return scrapy.FormRequest(
+                    url='https://www.lagou.com/jobs/positionAjax.json?px=default&city=' + response.meta['city'] + '&needAddtionalResult=false',
+                    meta=dict({'proxy': response.meta['proxy']}, **response.meta),
+                    formdata={'first': 'true', 'pn': '1', 'kd': response.meta['keyword']},
+                    headers={'Cookie': cookie},
+                    callback=self.parse,
+                    dont_filter=True
+                )
 
     def not_first_page(self, response):
         set_cookie = str(response.headers.getlist('Set-Cookie'))
+        logging.info(set_cookie)
         try:
-            user_trace_token = re.search('user_trace_token=.*?;', set_cookie).group(0)
             LGRID = re.search('LGRID=.*?;', set_cookie).group(0)
-            cookie = user_trace_token + LGRID + 'JSESSIONID=' + response.meta['JSESSIONID'] + ';SEARCH_ID=' + response.meta['SEARCH_ID']
+            LGSID = re.search('LGSID=.*?;', set_cookie).group(0)
+            LGUID = re.search('LGUID=.*?;', set_cookie).group(0)
+            # LGUID = ''
+            cookie = LGSID + LGRID + LGUID + response.meta['JSESSIONID'] + \
+                     response.meta['SEARCH_ID'] + response.meta['user_trace_token'] + response.meta['X_HTTP_TOKEN']
         except AttributeError:
-            self.redis_conn.srem('zhima_proxy', response.meta['proxy'])
-            return scrapy.Request(url=response.url, meta=response.meta, callback=self.init_parse, dont_filter=True)
+            # self.redis_conn.srem('zhima_proxy', response.meta['proxy'])
+            return scrapy.Request(url=response.meta['url'], meta=response.meta, callback=self.init_parse, dont_filter=True)
+        print(cookie)
         yield scrapy.FormRequest(
             url='https://www.lagou.com/jobs/positionAjax.json?px=default&city=' + response.meta[
                 'city'] + '&needAddtionalResult=false',
             meta=dict({'proxy': response.meta['proxy']}, **response.meta),
             formdata={'first': 'false', 'pn': response.meta['page'], 'kd': response.meta['keyword']},
             headers={'Cookie': cookie, 'Referer': response.meta['url']},
-            callback=self.parse
+            callback=self.parse,
+            dont_filter=True
         )
 
     def parse(self, response):
@@ -99,16 +126,19 @@ class Lagou(RedisSpider):
             item['publish_time'] = element['createTime']
 
             yield scrapy.Request(url=item['position_url'],
-                                 meta={"item": item},
+                                 meta={"item": item, "url": response.url},
                                  callback=self.detail_parse, dont_filter=True)
 
     def detail_parse(self, response):
         logging.info('-----------------' + response.url)
-        if ' https://www.lagou.com/utrack/verify.html' in response.url:
-            logging.info('---------------enter')
-            self.redis_conn.srem('zhima_proxy', response.meta['proxy'])
+        if 'https://www.lagou.com/utrack' in response.url or 'login' in response.url:
+            # time.sleep(3)
+            logging.info('---------------original url' + response.meta['item']['position_url'])
+            logging.info('---------------referer' + response.meta['url'])
+            # self.redis_conn.srem('zhima_proxy', response.meta['proxy'])
             return scrapy.Request(url=response.meta['item']['position_url'],
-                                  meta={"item": response.meta['item']},
+                                  meta=response.meta,
+                                  headers={'Referer': response.meta['url']},
                                   callback=self.detail_parse, dont_filter=True)
         item = response.meta['item']
         item['position_detail_info'] = self.get_position_detail_info(response)

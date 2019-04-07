@@ -53,7 +53,7 @@ class ZhilianSpider(RedisSpider):
     @staticmethod
     def get_position_detail_info(position):
         content = position.xpath(
-            '//div[@class="responsibility pos-common"]/div[@class="pos-ul"]/text()').re('[^\xa0]+')
-        content.extend(position.xpath(
-                '//div[@class="responsibility pos-common"]/div[@class="pos-ul"]/descendant::*/text()').re('[^\xa0]+'))
+            '//div[@class="describtion__detail-content"]/descendant-or-self::*/text()').re('[^\xa0]+')
+        # content.extend(position.xpath(
+        #         '//div[@class="responsibility pos-common"]/div[@class="pos-ul"]/descendant::*/text()').re('[^\xa0]+'))
         return content

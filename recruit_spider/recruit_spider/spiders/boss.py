@@ -23,15 +23,15 @@ class BossSpider(RedisSpider):
     def parse(self, response):
 
         position_url = self.get_position_url(response)
-        publish_time = self.get_publish_time(response)
+        # publish_time = self.get_publish_time(response)
         basic_info = self.get_position_basic_info(response)
 
         basic_info = [basic_info[i: i+3] for i in range(0, len(basic_info), 3)]
 
-        for url, publish_time, basic_info in map(lambda x, y, z: [x, y, z], position_url, publish_time, basic_info):
+        for url, basic_info in map(lambda x, y: [x, y], position_url, basic_info):
             url = "https://www.zhipin.com" + url
             yield scrapy.Request(url=url, callback=self.detail_parse, dont_filter=True,
-                                 meta=dict({'url': url, 'publish_time': publish_time, 'basic_info': basic_info}, **response.meta))
+                                 meta=dict({'url': url, 'basic_info': basic_info}, **response.meta))
 
     def detail_parse(self, response):
         item = BossSpiderItem()
@@ -45,7 +45,6 @@ class BossSpider(RedisSpider):
         item['salary'] = self.get_position_salary(response)
         item['working_place'], item['experience_requirement'], item['educational_requirement'] = \
             response.meta['basic_info']
-        item['publish_time'] = response.meta['publish_time']
         item['position_detail_info'] = self.get_position_detail_info(response)
         item['insert_time'] = datetime.datetime.now()
         return item
@@ -73,7 +72,7 @@ class BossSpider(RedisSpider):
 
     @staticmethod
     def get_position_salary(position):
-        return position.xpath('//div[@class="name"]/span[@class="salary"]/text()').re('\d+?-\d+?元')[0]
+        return position.xpath('//div[@class="name"]/span[@class="salary"]/text()').re('\d+?k-\d+?k')[0]
 
     @staticmethod
     def get_publish_time(position):
