@@ -1,4 +1,4 @@
-package dao
+package process
 
 import (
 	"../config"
@@ -13,11 +13,19 @@ func RedisInsert(platform, city []string, keyword string) {
 	for k, v := range construct {
 		for _, url := range v {
 			_, _ = c.Do("lpush", k, url)
+			//fmt.Println(c, k, url)
 		}
 	}
 }
 
 func ConstructUrl(platform, city []string, keyword string) map[string][]string {
+	fmt.Println(city)
+	fp := map[string]string{
+		"拉勾": "lagou",
+		"直聘": "boss",
+		"智联": "zhilian",
+		"51": "51job",
+	}
 	p := map[string]F{
 		"拉勾": ConstructLagou,
 		"直聘": ConstructBoss,
@@ -33,12 +41,11 @@ func ConstructUrl(platform, city []string, keyword string) map[string][]string {
 	result := make(map[string][]string)
 	for _, plat := range platform {
 		for _, c := range city {
-			_, judge := result[k[plat]]
-			if judge {
-				result[k[plat]] = make([]string, 1)
+			if Filter(fp[plat], c, keyword) {
+				continue
 			}
 			result[k[plat]] = append(result[k[plat]], p[plat](c, keyword)...)
-			fmt.Println(p, c)
+			//fmt.Println(result)
 		}
 	}
 	fmt.Println(result)

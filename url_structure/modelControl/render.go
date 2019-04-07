@@ -32,6 +32,7 @@ func startPage(c *gin.Context) {
 		city = strings.Split(person.Address, ",")
 		platform = strings.Split(person.Source, ",")
 		keyword = person.Keyword
+		//dao.RedisInsert(platform, city, keyword)
 	}
 	c.JSON(200, gin.H{
 		"status": "Success",
