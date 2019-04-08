@@ -26,7 +26,21 @@
         </div>
     {{end}}
 {{end}}
-
+<script>
+    {{if ne .page 1}}
+        document.write("<button onclick='last_page()'>上一页</button>");
+    {{end}}
+    document.write("<button>{{.page}}</button>");
+    document.write("<button onclick='next_page()'>下一页</button> ");
+</script>
+<script>
+    function last_page() {
+        window.location.href = "http://localhost:5000/upload?page=" + String({{.page}}-2)
+    }
+    function next_page() {
+        window.location.href = "http://localhost:5000/upload?page={{.page}}"
+    }
+</script>
 </body>
 </html>
 {{end}}

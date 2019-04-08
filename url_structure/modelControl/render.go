@@ -7,6 +7,7 @@ import (
 	"github.com/globalsign/mgo/bson"
 	"html/template"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -22,7 +23,6 @@ var platform = make([]string, 1)
 var keyword string
 
 func BuildUrl(id bson.ObjectId, platform string) string {
-	fmt.Println(id.Hex())
 	return "http://localhost:5000/position?id=" + id.Hex() + "&platform=" + platform
 }
 
@@ -40,10 +40,15 @@ func startPage(c *gin.Context) {
 }
 
 func jobPage(c *gin.Context) {
+	city = []string{"上海", "深圳"}
+	platform = []string{"拉勾", "51"}
+	keyword = "java"
+	page, _ := strconv.Atoi(c.Query("page"))
 	c.HTML(http.StatusOK, "spider.tmpl", gin.H{
+		"page":      page + 1,
 		"city":      city,
 		"platform":  platform,
-		"info":      process.BuildTotal(city, platform, keyword),
+		"info":      process.BuildSinglePage(page, city, platform, keyword),
 		"build_url": BuildUrl,
 	})
 }

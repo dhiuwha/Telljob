@@ -29,17 +29,24 @@ type Data struct {
 	InsertTime             time.Time `bson:"insert_time"`
 }
 
+type FilteredData struct {
+	ExperienceRequirement  string `bson:"experience_requirement"`
+	EducationalRequirement string `bson:"educational_requirement"`
+	Salary                 string `bson:"salary"`
+}
+
 type single struct {
 	FirstInfo  detail
 	SecondInfo detail
 }
 
+type filter map[string][]FilteredData
 type total map[string][]Data
 type detail []string
 
-func BuildTotal(city, platform []string, keyword string) map[string][]Data {
+func BuildSinglePage(page int, city, platform []string, keyword string) map[string][]Data {
 	result := make(total)
-	for k, v := range GetAll(city, platform, keyword) {
+	for k, v := range GetSinglePage(page, city, platform, keyword) {
 		result[k] = append(result[k], v...)
 	}
 	return result
@@ -49,14 +56,27 @@ func BuildSingle(id, platform string) Data {
 	return GetOne(bson.ObjectIdHex(id), platform)
 }
 
-func GetAll(city, platform []string, keyword string) map[string][]Data {
+func BuildTotal(city, platform []string, keyword string) map[string][]FilteredData {
+	result := make(filter)
+	for k, v := range GetAll(city, platform, keyword) {
+		result[k] = append(result[k], v...)
+	}
+	return result
+}
 
+func GetSinglePage(page int, city, platform []string, keyword string) map[string][]Data {
+	today, _ := time.Parse("2006-01-02", time.Now().AddDate(0, 0, -1).Format("2006-01-02"))
+	tomorrow, _ := time.Parse("2006-01-02", time.Now().AddDate(0, 0, 0).Format("2006-01-02"))
+	insertTime := bson.M{
+		"$gte": today,
+		"$lt":  tomorrow,
+	}
 	result := make(map[string][]Data)
 	for _, p := range platform {
 		conn, cursor := dao.Connect("tell_job", platformMap[p])
 		for _, c := range city {
 			var data []Data
-			dao.FindAll(cursor, bson.M{"keyword": keyword, "city": c}, &data)
+			dao.FindSinglePage(cursor, page*5, bson.M{"keyword": keyword, "city": c, "insert_time": insertTime}, &data)
 			result[platformMap[p]] = append(result[platformMap[p]], data...)
 		}
 		conn.Close()
@@ -73,8 +93,32 @@ func GetOne(id bson.ObjectId, platform string) Data {
 	return data
 }
 
+func GetAll(city, platform []string, keyword string) map[string][]FilteredData {
+	today, _ := time.Parse("2006-01-02", time.Now().AddDate(0, 0, -2).Format("2006-01-02"))
+	tomorrow, _ := time.Parse("2006-01-02", time.Now().AddDate(0, 0, 0).Format("2006-01-02"))
+	insertTime := bson.M{
+		"$gte": today,
+		"$lt":  tomorrow,
+	}
+	result := make(map[string][]FilteredData)
+	for _, p := range platform {
+		conn, cursor := dao.Connect("tell_job", platformMap[p])
+		for _, c := range city {
+			aggregation := []bson.M{
+				{"$match": bson.M{"keyword": keyword, "city": c, "insert_time": insertTime}},
+				{"$project": bson.M{"_id": 0, "salary": 1, "experience_requirement": 1, "educational_requirement": 1}},
+			}
+			var data []FilteredData
+			dao.FindAll(cursor, aggregation, &data)
+			result[platformMap[p]] = append(result[platformMap[p]], data...)
+		}
+		conn.Close()
+	}
+	return result
+}
+
 func Filter(platform, city, keyword string) bool {
-	fmt.Println(platform, city, keyword)
+	//fmt.Println(platform, city, keyword)
 	var data Data
 	conn, cursor := dao.Connect("tell_job", platform)
 	defer conn.Close()
