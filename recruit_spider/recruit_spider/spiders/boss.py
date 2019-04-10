@@ -16,6 +16,8 @@ class BossSpider(RedisSpider):
 
     redis_key = 'boss:start_urls'
 
+    education_filter = ['大专', '本科', '硕士', '博士']
+
     def make_requests_from_url(self, url):
         info = re.search('(?<=&ka=page-\d).*', url).group(0)
         return scrapy.Request(url=url.replace(info, ""), meta=json.loads(info), callback=self.parse, dont_filter=True)
@@ -47,6 +49,9 @@ class BossSpider(RedisSpider):
             response.meta['basic_info']
         item['position_detail_info'] = self.get_position_detail_info(response)
         item['insert_time'] = datetime.datetime.now()
+        item['experience_requirement'] = "不限" if item['experience_requirement'] == '1年以内' or item['experience_requirement'] == '应届生' or item['experience_requirement'] == '经验不限' else item['experience_requirement']
+        if item['educational_requirement'] not in self.education_filter:
+            item['educational_requirement'] = "大专以下"
         return item
 
     @staticmethod

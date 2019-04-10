@@ -18,6 +18,8 @@ class A51jobSpider(RedisSpider):
 
     redis_key = '51job:start_urls'
 
+    education_filter = ['大专', '本科', '硕士', '博士']
+
     def make_requests_from_url(self, url):
         info = re.search('(?<=\.html).*', url).group(0)
         return scrapy.Request(url=url.replace(info, ""), meta=json.loads(info), callback=self.parse, dont_filter=True)
@@ -44,6 +46,26 @@ class A51jobSpider(RedisSpider):
         item['publish_time'] = re.search('\d{2}-\d{2}(?=发布)', item['publish_time']).group(0)
         item['position_detail_info'] = self.get_position_detail_info(response)
         item['insert_time'] = datetime.datetime.now()
+        if item['educational_requirement'] not in self.education_filter:
+            item['educational_requirement'] = "大专以下"
+        if item['experience_requirement'] == "无工作经验":
+            item['experience_requirement'] = "不限"
+        elif '1' in item['experience_requirement'] or '2' in item['experience_requirement']:
+            item['experience_requirement'] = "1-3年"
+        elif '3' in item['experience_requirement'] or '4' in item['experience_requirement'] or '5' in item['experience_requirement']:
+            item['experience_requirement'] = "3-5年"
+        elif '10' in item['experience_requirement']:
+            item['experience_requirement'] = "10年以上"
+        else:
+            item['experience_requirement'] = "5-10年"
+        if '千' in item['salary']:
+            begin = re.search('.+?(?=-)', item['salary']).group(0)
+            end = re.search('(?<=-).+?(?=千)', item['salary']).group(0)
+            item['salary'] = begin + 'k-' + end + 'k'
+        elif '万' in item['salary']:
+            begin = re.search('.+?(?=-)', item['salary']).group(0)
+            end = re.search('(?<=-).+?(?=万)', item['salary']).group(0)
+            item['salary'] = str(int(float(begin) * 10)) + 'k-' + str(int(float(end) * 10)) + 'k'
         yield item
 
     @staticmethod
@@ -76,4 +98,3 @@ class A51jobSpider(RedisSpider):
         if len(content) == 0:
             content = position.xpath('//div[@class="bmsg job_msg inbox"]/p/descendant::*/text()').re('[^\xa0]+')
         return content
-
