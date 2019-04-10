@@ -40,7 +40,6 @@ type single struct {
 	SecondInfo detail
 }
 
-type filter map[string][]FilteredData
 type total map[string][]Data
 type detail []string
 
@@ -56,16 +55,18 @@ func BuildSingle(id, platform string) Data {
 	return GetOne(bson.ObjectIdHex(id), platform)
 }
 
-func BuildTotal(city, platform []string, keyword string) map[string][]FilteredData {
-	result := make(filter)
-	for k, v := range GetAll(city, platform, keyword) {
-		result[k] = append(result[k], v...)
+func BuildTotal(city, platform []string, keyword string) map[string][]string {
+	result := make(map[string][]string)
+	for _, element := range GetAll(city, platform, keyword) {
+		result["salary"] = append(result["salary"], element.Salary)
+		result["experience"] = append(result["experience"], element.ExperienceRequirement)
+		result["education"] = append(result["education"], element.EducationalRequirement)
 	}
 	return result
 }
 
 func GetSinglePage(page int, city, platform []string, keyword string) map[string][]Data {
-	today, _ := time.Parse("2006-01-02", time.Now().AddDate(0, 0, -1).Format("2006-01-02"))
+	today, _ := time.Parse("2006-01-02", time.Now().AddDate(0, 0, -3).Format("2006-01-02"))
 	tomorrow, _ := time.Parse("2006-01-02", time.Now().AddDate(0, 0, 0).Format("2006-01-02"))
 	insertTime := bson.M{
 		"$gte": today,
@@ -93,14 +94,14 @@ func GetOne(id bson.ObjectId, platform string) Data {
 	return data
 }
 
-func GetAll(city, platform []string, keyword string) map[string][]FilteredData {
-	today, _ := time.Parse("2006-01-02", time.Now().AddDate(0, 0, -2).Format("2006-01-02"))
+func GetAll(city, platform []string, keyword string) []FilteredData {
+	today, _ := time.Parse("2006-01-02", time.Now().AddDate(0, 0, -3).Format("2006-01-02"))
 	tomorrow, _ := time.Parse("2006-01-02", time.Now().AddDate(0, 0, 0).Format("2006-01-02"))
 	insertTime := bson.M{
 		"$gte": today,
 		"$lt":  tomorrow,
 	}
-	result := make(map[string][]FilteredData)
+	result := make([]FilteredData, 1)
 	for _, p := range platform {
 		conn, cursor := dao.Connect("tell_job", platformMap[p])
 		for _, c := range city {
@@ -110,7 +111,7 @@ func GetAll(city, platform []string, keyword string) map[string][]FilteredData {
 			}
 			var data []FilteredData
 			dao.FindAll(cursor, aggregation, &data)
-			result[platformMap[p]] = append(result[platformMap[p]], data...)
+			result = append(result, data...)
 		}
 		conn.Close()
 	}

@@ -40,8 +40,8 @@ func startPage(c *gin.Context) {
 }
 
 func jobPage(c *gin.Context) {
-	city = []string{"上海", "深圳"}
-	platform = []string{"拉勾", "51"}
+	city = []string{"上海", "深圳", "北京", "广州"}
+	platform = []string{"拉勾", "51", "智联", "直聘"}
 	keyword = "java"
 	page, _ := strconv.Atoi(c.Query("page"))
 	c.HTML(http.StatusOK, "spider.tmpl", gin.H{
@@ -59,6 +59,21 @@ func queryPosition(c *gin.Context) {
 	fmt.Println(id)
 	c.HTML(http.StatusOK, "detail.tmpl", gin.H{
 		"detail": process.BuildSingle(id, platform),
+	})
+}
+
+func queryEcharts(c *gin.Context) {
+	city = []string{"上海", "深圳", "北京", "广州"}
+	platform = []string{"拉勾", "51", "智联", "直聘"}
+	keyword = "java"
+	result := process.BuildTotal(city, platform, keyword)
+	experience := process.ExperienceHandle(result["experience"])
+	education := process.EducationHandle(result["education"])
+	salary := process.SalaryHandle(result)
+	c.JSON(200, gin.H{
+		"experience": experience,
+		"education":  education,
+		"salary":     salary,
 	})
 }
 
@@ -109,5 +124,6 @@ func Router() {
 	router.POST("/post", startPage)
 	router.GET("/upload", jobPage)
 	router.GET("/position", queryPosition)
+	router.GET("/echarts_data", queryEcharts)
 	_ = router.Run("0.0.0.0:5000")
 }
