@@ -2,6 +2,7 @@ package dao
 
 import (
 	"../config"
+	"fmt"
 	"github.com/globalsign/mgo"
 	"log"
 )
@@ -28,6 +29,11 @@ func FindOne(c *mgo.Collection, query, result interface{}) {
 	_ = c.Find(query).One(result)
 }
 
+func FindSinglePage(c *mgo.Collection, page int, query, result interface{}) {
+	_ = c.Find(query).Sort("insert_time").Skip(page).Limit(5).All(result)
+}
+
 func FindAll(c *mgo.Collection, query, result interface{}) {
-	_ = c.Find(query).All(result)
+	fmt.Println(query)
+	_ = c.Pipe(query).All(result)
 }

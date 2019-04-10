@@ -4,6 +4,8 @@
 #
 # See documentation in:
 # https://doc.scrapy.org/en/latest/topics/spider-middleware.html
+import base64
+import logging
 import random
 import time
 
@@ -11,7 +13,8 @@ import redis
 import requests
 from scrapy import signals
 
-from recruit_spider.config import user_agent, remove_proxy_api, get_proxy_api, redis_host, redis_port
+from recruit_spider.config import user_agent, redis_host, redis_port, abu_host, \
+    abu_port, abu_user, abu_pwd
 from recruit_spider.proxy import Proxy
 
 
@@ -89,12 +92,11 @@ class RecruitSpiderDownloaderMiddleware(object):
         # - or return a Request object
         # - or raise IgnoreRequest: process_exception() methods of
         #   installed downloader middleware will be called
-
         request.headers['User-Agent'] = random.choice(user_agent)
 
         redis_member_num = self.redis_conn.scard('zhima_proxy')
         #
-        if redis_member_num < 3:
+        if redis_member_num < 5:
             if self.redis_conn.get('proxy_lock') != 'locked':
                 self.redis_conn.set('proxy_lock', 'locked')
                 Proxy(self.redis_conn).put_into_redis()
@@ -102,9 +104,16 @@ class RecruitSpiderDownloaderMiddleware(object):
             else:
                 time.sleep(1)
 
-        if 'https://www.lagou.com/jobs/positionAjax.json?' not in request.url:
+        if 'lagou' in request.url or 'verify' in request.url or 'login' in request.url:
+            request.meta['proxy'] = 'http://http-dyn.abuyun.com:9020'
+            proxyAuth = "Basic " + base64.urlsafe_b64encode(bytes((abu_user + ":" + abu_pwd), "ascii")).decode(
+                "utf8")
+            request.headers["Proxy-Authorization"] = proxyAuth
+        else:
             proxy = self.redis_conn.srandmember('zhima_proxy')
+            logging.info(proxy)
             request.meta['proxy'] = proxy
+
 
     def process_response(self, request, response, spider):
         # Called with the response returned from the downloader.

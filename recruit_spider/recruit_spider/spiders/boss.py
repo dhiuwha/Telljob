@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
+import datetime
+import json
 import logging
+import re
 import time
 
 import scrapy
@@ -14,23 +17,27 @@ class BossSpider(RedisSpider):
     redis_key = 'boss:start_urls'
 
     def make_requests_from_url(self, url):
-        return scrapy.Request(url=url, callback=self.parse, dont_filter=True)
+        info = re.search('(?<=&ka=page-\d).*', url).group(0)
+        return scrapy.Request(url=url.replace(info, ""), meta=json.loads(info), callback=self.parse, dont_filter=True)
 
     def parse(self, response):
 
         position_url = self.get_position_url(response)
-        publish_time = self.get_publish_time(response)
+        # publish_time = self.get_publish_time(response)
         basic_info = self.get_position_basic_info(response)
 
         basic_info = [basic_info[i: i+3] for i in range(0, len(basic_info), 3)]
 
-        for url, publish_time, basic_info in map(lambda x, y, z: [x, y, z], position_url, publish_time, basic_info):
+        for url, basic_info in map(lambda x, y: [x, y], position_url, basic_info):
             url = "https://www.zhipin.com" + url
             yield scrapy.Request(url=url, callback=self.detail_parse, dont_filter=True,
-                                 meta={'url': url, 'publish_time': publish_time, 'basic_info': basic_info})
+                                 meta=dict({'url': url, 'basic_info': basic_info}, **response.meta))
 
     def detail_parse(self, response):
         item = BossSpiderItem()
+
+        item['city'] = response.meta['city']
+        item['keyword'] = response.meta['keyword']
         item['position_name'] = self.get_position_name(response)
         item['position_url'] = response.meta['url']
         item['company_name'] = self.get_company_name(response)
@@ -38,9 +45,8 @@ class BossSpider(RedisSpider):
         item['salary'] = self.get_position_salary(response)
         item['working_place'], item['experience_requirement'], item['educational_requirement'] = \
             response.meta['basic_info']
-        item['publish_time'] = response.meta['publish_time']
         item['position_detail_info'] = self.get_position_detail_info(response)
-        item['insert_time'] = time.time()
+        item['insert_time'] = datetime.datetime.now()
         return item
 
     @staticmethod
@@ -66,7 +72,7 @@ class BossSpider(RedisSpider):
 
     @staticmethod
     def get_position_salary(position):
-        return position.xpath('//div[@class="name"]/span[@class="salary"]/text()').re('\d+?-\d+?元')[0]
+        return position.xpath('//div[@class="name"]/span[@class="salary"]/text()').re('\d+?k-\d+?k')[0]
 
     @staticmethod
     def get_publish_time(position):

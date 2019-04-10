@@ -15,6 +15,8 @@ class RecruitSpiderItem(scrapy.Item):
 
 
 class A51jobSpiderItem(scrapy.Item):
+    city = scrapy.Field()
+    keyword = scrapy.Field()
     position_name = scrapy.Field()
     position_url = scrapy.Field()
     company_name = scrapy.Field()
@@ -31,6 +33,8 @@ class A51jobSpiderItem(scrapy.Item):
 
 
 class BossSpiderItem(scrapy.Item):
+    city = scrapy.Field()
+    keyword = scrapy.Field()
     position_name = scrapy.Field()
     position_url = scrapy.Field()
     company_name = scrapy.Field()
@@ -47,6 +51,8 @@ class BossSpiderItem(scrapy.Item):
 
 
 class ZhilianSpiderItem(scrapy.Item):
+    city = scrapy.Field()
+    keyword = scrapy.Field()
     position_name = scrapy.Field()
     position_url = scrapy.Field()
     company_name = scrapy.Field()
@@ -56,7 +62,7 @@ class ZhilianSpiderItem(scrapy.Item):
     experience_requirement = scrapy.Field()
     educational_requirement = scrapy.Field()
     header_count = scrapy.Field()
-    create_time = scrapy.Field()
+    publish_time = scrapy.Field()
     update_time = scrapy.Field()
     end_time = scrapy.Field()
     insert_time = scrapy.Field()
@@ -65,6 +71,8 @@ class ZhilianSpiderItem(scrapy.Item):
 
 
 class LaGouSpiderItem(scrapy.Item):
+    city = scrapy.Field()
+    keyword = scrapy.Field()
     position_name = scrapy.Field()
     position_url = scrapy.Field()
     company_name = scrapy.Field()
