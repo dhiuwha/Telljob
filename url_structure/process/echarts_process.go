@@ -9,6 +9,9 @@ import (
 func ExperienceHandle(experience []string) map[string]int {
 	result := make(map[string]int)
 	for _, element := range experience {
+		if element == "" {
+			continue
+		}
 		result[element] += 1
 	}
 	return result
@@ -17,6 +20,9 @@ func ExperienceHandle(experience []string) map[string]int {
 func EducationHandle(education []string) map[string]int {
 	result := make(map[string]int)
 	for _, element := range education {
+		if element == "" {
+			continue
+		}
 		result[element] += 1
 	}
 	return result
@@ -74,8 +80,9 @@ func SalaryHandle(salaryDistribution map[string][]string) map[string]map[string]
 	var key string
 	re, _ := regexp.Compile(`[\d]+`)
 	for i := 0; i < len(salaryDistribution["salary"]); i++ {
+		fmt.Println(salaryDistribution["salary"][i])
 		temp := re.FindAll([]byte(salaryDistribution["salary"][i]), 2)
-		if temp != nil {
+		if len(temp) == 2 {
 			salaryBegin, _ := strconv.Atoi(string(temp[0]))
 			salaryEnd, _ := strconv.Atoi(string(temp[1]))
 			avg := (salaryBegin + salaryEnd) / 2
