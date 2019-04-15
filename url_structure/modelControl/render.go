@@ -32,7 +32,7 @@ func startPage(c *gin.Context) {
 		city = strings.Split(person.Address, ",")
 		platform = strings.Split(person.Source, ",")
 		keyword = person.Keyword
-		//dao.RedisInsert(platform, city, keyword)
+		process.RedisInsert(platform, city, keyword)
 	}
 	c.JSON(200, gin.H{
 		"status": "Success",
@@ -40,9 +40,9 @@ func startPage(c *gin.Context) {
 }
 
 func jobPage(c *gin.Context) {
-	city = []string{"上海", "深圳", "北京", "广州"}
-	platform = []string{"拉勾", "51", "智联", "直聘"}
-	keyword = "java"
+	//city = []string{"上海", "深圳", "北京", "广州"}
+	//platform = []string{"拉勾", "51", "智联", "直聘"}
+	//keyword = "java"
 	page, _ := strconv.Atoi(c.Query("page"))
 	c.HTML(http.StatusOK, "spider.tmpl", gin.H{
 		"page":      page + 1,
@@ -63,9 +63,9 @@ func queryPosition(c *gin.Context) {
 }
 
 func queryEcharts(c *gin.Context) {
-	city = []string{"上海", "深圳", "北京", "广州"}
-	platform = []string{"拉勾", "51", "智联", "直聘"}
-	keyword = "java"
+	//city = []string{"上海", "深圳", "北京", "广州"}
+	//platform = []string{"拉勾", "51", "智联", "直聘"}
+	//keyword = "java"
 	result := process.BuildTotal(city, platform, keyword)
 	experience := process.ExperienceHandle(result["experience"])
 	education := process.EducationHandle(result["education"])

@@ -66,8 +66,8 @@ func BuildTotal(city, platform []string, keyword string) map[string][]string {
 }
 
 func GetSinglePage(page int, city, platform []string, keyword string) map[string][]Data {
-	today, _ := time.Parse("2006-01-02", time.Now().AddDate(0, 0, -3).Format("2006-01-02"))
-	tomorrow, _ := time.Parse("2006-01-02", time.Now().AddDate(0, 0, 0).Format("2006-01-02"))
+	today, _ := time.Parse("2006-01-02", time.Now().AddDate(0, 0, 0).Format("2006-01-02"))
+	tomorrow, _ := time.Parse("2006-01-02", time.Now().AddDate(0, 0, 1).Format("2006-01-02"))
 	insertTime := bson.M{
 		"$gte": today,
 		"$lt":  tomorrow,
@@ -95,8 +95,8 @@ func GetOne(id bson.ObjectId, platform string) Data {
 }
 
 func GetAll(city, platform []string, keyword string) []FilteredData {
-	today, _ := time.Parse("2006-01-02", time.Now().AddDate(0, 0, -3).Format("2006-01-02"))
-	tomorrow, _ := time.Parse("2006-01-02", time.Now().AddDate(0, 0, 0).Format("2006-01-02"))
+	today, _ := time.Parse("2006-01-02", time.Now().AddDate(0, 0, 0).Format("2006-01-02"))
+	tomorrow, _ := time.Parse("2006-01-02", time.Now().AddDate(0, 0, 1).Format("2006-01-02"))
 	insertTime := bson.M{
 		"$gte": today,
 		"$lt":  tomorrow,

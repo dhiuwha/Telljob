@@ -22,22 +22,9 @@
 <div id="salary" style="width: 600px;height:400px;float:right"></div><br>
 
 <script type="text/javascript">
-    fetch("http://localhost:5000/echarts_data").then(
-        function (response) {
-            return response.json()
-        }).then(function (myJson) {
-        experience = myJson["experience"];
-        education = myJson["education"];
-        salary = myJson["salary"];
-        console.log(experience);
-
-        experience_pie(experience);
-        education_pie(education);
-        salary_pillar(salary)
-
-    });
+    get_echarts_data();
     intervalId = setInterval(get_echarts_data, 10000);
-    setTimeout("clearInterval(intervalId)", 60000);
+    setTimeout("clearInterval(intervalId)", 600000);
 
     function get_echarts_data(){
         fetch("http://localhost:5000/echarts_data").then(
@@ -120,63 +107,33 @@
 
     function education_pie(education){
         echarts.init(document.getElementById('education')).setOption({
-            title: {
-                text: '漏斗图',
-                subtext: '纯属虚构'
-            },
             tooltip: {
                 trigger: 'item',
-                formatter: "{a} <br/>{b} : {c}"
+                formatter: "{a} <br/>{b}: {c} ({d}%)"//模板变量有 {a}、{b}、{c}、{d}，分别表示系列名，数据名，数据值，百分比。
             },
-            toolbox: {
-                feature: {
-                    dataView: {readOnly: false},
-                    restore: {},
-                    saveAsImage: {}
-                }
+            label: {
+                normal: {
+                    show: true,
+                    position: 'inside',
+                    formatter: '{d}%',//模板变量有 {a}、{b}、{c}、{d}，分别表示系列名，数据名，数据值，百分比。{d}数据会根据value值计算百分比
+
+                    textStyle : {
+                        align : 'center',
+                        baseline : 'middle',
+                        fontFamily : '微软雅黑',
+                        fontSize : 15,
+                        fontWeight : 'bolder'
+                    }
+                },
             },
-            legend: {
-                data: ['展现','点击','访问','咨询','订单']
-            },
-            calculable: true,
-            series: [
+            series : [
                 {
-                    name:'漏斗图',
-                    type:'funnel',
-                    left: '10%',
-                    top: 60,
-                    //x2: 80,
-                    bottom: 60,
-                    width: '80%',
-                    // height: {totalHeight} - y - y2,
-                    min: 0,
-                    max: 100,
-                    minSize: '0%',
-                    maxSize: '100%',
-                    sort: 'descending',
-                    gap: 2,
-                    label: {
-                        show: true,
-                        position: 'inside'
-                    },
-                    labelLine: {
-                        length: 10,
-                        lineStyle: {
-                            width: 1,
-                            type: 'solid'
-                        }
-                    },
-                    itemStyle: {
-                        borderColor: '#fff',
-                        borderWidth: 1
-                    },
-                    emphasis: {
-                        label: {
-                            fontSize: 20
-                        }
-                    },
+                    name: '访问来源',
+                    type: 'pie',
+                    radius: '70%',
                     data: pie_data(education)
-                }]
+                }
+            ]
         });
     }
 

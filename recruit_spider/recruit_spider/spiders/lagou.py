@@ -30,13 +30,8 @@ class Lagou(RedisSpider):
         info['init_url'] = url
         return scrapy.Request(url=url, meta=info, callback=self.init_parse, dont_filter=True)
 
-    def init_parse(self, response, a=None):
+    def init_parse(self, response):
         logging.info(response.url)
-        # if not a:
-        #     return scrapy.Request(response.url, meta={"a": 1}, callback=self.init_parse, dont_filter=True)
-        # else:
-        #     print(1)
-        #     yield scrapy.Request(response.url, meta={"a": 1}, callback=self.init_parse, dont_filter=True)
         if 'https://www.lagou.com/utrack/' in response.url:
             time.sleep(2)
             self.redis_conn.srem('zhima_proxy', response.meta['proxy'])
@@ -56,7 +51,6 @@ class Lagou(RedisSpider):
                 X_HTTP_TOKEN = re.search('X_HTTP_TOKEN=.*?(?=;)', set_cookie).group(0)
 
             except AttributeError:
-                # self.redis_conn.srem('zhima_proxy', response.meta['proxy'])
                 return scrapy.Request(url=response.meta['init_url'], meta=response.meta, callback=self.init_parse, dont_filter=True)
             cookie = JSESSIONID + SEARCH_ID + user_trace_token + X_HTTP_TOKEN
             if response.meta["page"] != '1':
@@ -120,8 +114,8 @@ class Lagou(RedisSpider):
             item['company_name'] = element['companyFullName']
             item['company_url'] = "https://www.lagou.com/gongsi/" + str(element['companyId']) + ".html"
             item['working_place'] = element['city'] + " " + element['district']
-            item['experience_requirement'] = element['workYear']
-            item['educational_requirement'] = element['education']
+            item['experience_requirement'] = "不限" if element['workYear'] == '1年以下' or element['workYear'] == '应届毕业生' else element['workYear']
+            item['educational_requirement'] = "大专以下" if element['education'] == '不要求' else element['education']
             item['salary'] = element['salary']
             item['publish_time'] = element['createTime']
 

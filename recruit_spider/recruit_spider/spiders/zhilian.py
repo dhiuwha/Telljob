@@ -16,6 +16,8 @@ class ZhilianSpider(RedisSpider):
 
     redis_key = 'zhilian:start_urls'
 
+    education_filter = ['大专', '本科', '硕士', '博士']
+
     def make_requests_from_url(self, url):
         info = re.search('(?<=&kt=3).*', url).group(0)
         return scrapy.Request(url=url.replace(info, ""), meta=json.loads(info), callback=self.parse, dont_filter=True)
@@ -40,6 +42,10 @@ class ZhilianSpider(RedisSpider):
             item['update_time'] = element['updateDate']
             item['end_time'] = element['endDate']
             item['header_count'] = element['recruitCount']
+            if item['educational_requirement'] not in self.education_filter:
+                item['educational_requirement'] = "大专以下"
+            if item['experience_requirement'] == "无经验" or item['experience_requirement'] == "1年以下":
+                item['experience_requirement'] = "不限"
             # if item['position_url'] == 'https://jobs.zhaopin.com/CC263265337J00086662006.htm':
             yield scrapy.Request(url=item['position_url'], meta={"item": item},
                                  callback=self.detail_parse, dont_filter=True)
